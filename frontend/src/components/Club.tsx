@@ -1,0 +1,538 @@
+import { useEffect, useState } from "react";
+import QRCode from "qrcode";
+import {
+  ArrowRight,
+  Copy,
+  Coins,
+  Gift,
+  Users,
+  Wallet,
+  Ticket,
+  ArrowUpRight,
+  LogOut,
+  Check,
+  Clock,
+  Heart,
+  Wrench,
+} from "lucide-react";
+import { bikes, brands, rewards, type Bike, type Brand } from "../data/catalog";
+import type { Account, Activity, Coupon, Demo } from "../lib/demo";
+import { BikeCard } from "./Marketplace";
+import { BrandLogo, date, fmt, Modal, SectionHead } from "./ui";
+export function CouponDialog({
+  coupon,
+  onClose,
+  onWorkshop,
+}: {
+  coupon: Coupon;
+  onClose: () => void;
+  onWorkshop: (coupon: Coupon) => void;
+}) {
+  const [qr, setQr] = useState("");
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    let active = true;
+    QRCode.toDataURL(coupon.id, {
+      width: 240,
+      margin: 4,
+      color: { dark: "#101412", light: "#ffffff" },
+    })
+      .then((url) => {
+        if (active) setQr(url);
+      })
+      .catch(() => {
+        if (active) setFailed(true);
+      });
+    return () => {
+      active = false;
+    };
+  }, [coupon.id]);
+  const reward = rewards.find((r) => r.id === coupon.rewardId);
+  const expired = new Date(coupon.expiresAt) <= new Date();
+  return (
+    <Modal title="Tu beneficio RideClub" onClose={onClose}>
+      <div className="coupon-dialog">
+        <BrandLogo brand={coupon.brand} />
+        <span className={`status-pill ${coupon.usedAt ? "used" : ""}`}>
+          {coupon.usedAt ? "Utilizado" : expired ? "Vencido" : "Disponible"}
+        </span>
+        <h3>{coupon.title}</h3>
+        <span className="fine-print">
+          Cupón de demostración · NFT pendiente de integración
+        </span>
+        {!coupon.usedAt && !expired && (
+          <>
+            {qr ? (
+              <img className="qr" src={qr} alt={`QR del cupón ${coupon.id}`} />
+            ) : (
+              <p>
+                {failed
+                  ? "Usa el código del cupón para validar."
+                  : "Preparando QR…"}
+              </p>
+            )}
+            <p>
+              Muestra este QR en el taller participante.
+              <br />
+              <small>
+                El cliente debe autorizar el uso y el taller validarlo.
+              </small>
+            </p>
+          </>
+        )}
+        <code className="coupon-code">{coupon.id}</code>
+        <dl className="coupon-details">
+          <div>
+            <dt>Fecha de canje</dt>
+            <dd>{date(coupon.issuedAt)}</dd>
+          </div>
+          <div>
+            <dt>Válido hasta</dt>
+            <dd>{date(coupon.expiresAt)}</dd>
+          </div>
+          <div>
+            <dt>Puntos utilizados</dt>
+            <dd>
+              {fmt(coupon.points)} {coupon.brand}
+            </dd>
+          </div>
+          {coupon.usedAt && (
+            <>
+              <div>
+                <dt>Fecha de uso</dt>
+                <dd>{date(coupon.usedAt)}</dd>
+              </div>
+              <div>
+                <dt>Taller</dt>
+                <dd>{coupon.workshop}</dd>
+              </div>
+            </>
+          )}
+        </dl>
+        <p className="fine-print">{reward?.terms}</p>
+        {!coupon.usedAt && !expired && (
+          <button
+            className="button dark full"
+            onClick={() => onWorkshop(coupon)}
+          >
+            Probar validación en taller
+            <ArrowRight size={18} />
+          </button>
+        )}
+        <p className="fine-print">
+          El QR identifica este cupón local. La validación y quema real del NFT
+          se conectarán al backend.
+        </p>
+      </div>
+    </Modal>
+  );
+}
+export default function Club({
+  account,
+  state,
+  onJoin,
+  onLogout,
+  onRewards,
+  onCoupon,
+  onFavorite,
+  onBike,
+  onCopy,
+  onBrand,
+}: {
+  account?: Account;
+  state: Demo;
+  onJoin: () => void;
+  onLogout: () => void;
+  onRewards: () => void;
+  onCoupon: (c: Coupon) => void;
+  onFavorite: (id: string) => void;
+  onBike: (b: Bike) => void;
+  onCopy: (v: string) => void;
+  onBrand: (b: Brand) => void;
+}) {
+  const [tab, setTab] = useState("benefits");
+  const [used, setUsed] = useState(false);
+  if (!account)
+    return (
+      <section className="join-page">
+        <span className="eyebrow">TU COMUNIDAD. TU PRÓXIMA RUTA.</span>
+        <div className="join-icon">
+          <Users size={48} />
+        </div>
+        <h1>
+          Todo empieza
+          <br />
+          con <em>ser parte.</em>
+        </h1>
+        <p>
+          Crea tu cuenta y encuentra tus puntos, beneficios y referidos en un
+          solo lugar.
+        </p>
+        <button className="button primary" onClick={onJoin}>
+          Entrar a RideClub
+          <ArrowUpRight size={19} />
+        </button>
+        <div className="join-perks">
+          <span>
+            <Coins size={20} /> Puntos por marca
+          </span>
+          <span>
+            <Gift size={20} /> Beneficios exclusivos
+          </span>
+          <span>
+            <Users size={20} /> Tu código de referido
+          </span>
+        </div>
+      </section>
+    );
+  const coupons = state.coupons.filter((c) => c.ownerId === account.id);
+  const active = coupons.filter(
+    (c) => !c.usedAt && new Date(c.expiresAt) > new Date(),
+  );
+  const history = state.activities.filter((a) => a.accountId === account.id);
+  const referrals = state.accounts.filter((a) => a.referredBy === account.code);
+  const refURL = `${window.location.origin}${window.location.pathname}?ref=${account.code}#club`;
+  return (
+    <section className="page-section club-page">
+      <div className="club-heading">
+        <div>
+          <span className="eyebrow">TU PRÓXIMA RUTA, CON MÁS BENEFICIOS</span>
+          <h1>
+            Hola, {account.name.split(" ")[0]}
+            <span className="lime">.</span>
+          </h1>
+          <p>Qué bueno verte de vuelta en el club.</p>
+        </div>
+        <button className="button secondary small" onClick={onLogout}>
+          <LogOut size={16} /> Salir de la demo
+        </button>
+      </div>
+      <div className="club-dashboard">
+        <div className="points-panel">
+          <div className="points-top">
+            <span className="eyebrow">TU SALDO RIDECLUB</span>
+            <Coins size={22} />
+          </div>
+          <strong className="points-total">
+            {fmt(
+              account.points.Zontes + account.points.NIU + account.points.Kiden,
+            )}
+            <small>puntos</small>
+          </strong>
+          <p>Tu próxima recompensa está más cerca.</p>
+          <div className="brand-balances">
+            {brands.map((b) => (
+              <button key={b} onClick={() => onBrand(b)}>
+                <BrandLogo brand={b} />
+                <strong>
+                  {fmt(account.points[b])}
+                  <ArrowUpRight size={14} />
+                </strong>
+              </button>
+            ))}
+          </div>
+          <button className="button primary full" onClick={onRewards}>
+            Explorar recompensas
+            <ArrowRight size={17} />
+          </button>
+          <span className="points-note">
+            Puntos de demo separados por marca.
+          </span>
+        </div>
+        <div className="referral-panel">
+          <span className="eyebrow">LAS BUENAS RUTAS SE COMPARTEN</span>
+          <Users size={28} />
+          <h2>
+            Invita a tu próximo
+            <br />
+            compañero de ruta.
+          </h2>
+          <p>
+            Comparte tu número. Por un referido confirmado, puedes ganar{" "}
+            <strong>200 puntos</strong>.
+          </p>
+          <button
+            className="ref-copy"
+            onClick={() => onCopy(account.code)}
+            aria-label="Copiar número de referido"
+          >
+            <span>{account.code}</span>
+            <Copy size={20} />
+          </button>
+          <button className="text-link" onClick={() => onCopy(refURL)}>
+            Copiar enlace de invitación
+            <ArrowUpRight size={16} />
+          </button>
+          <small>
+            {referrals.length} riders registrados con tu código · recompensa
+            después de confirmar una compra válida.
+          </small>
+        </div>
+        <div className="profile-panel">
+          <div className="profile-avatar">
+            {account.name.slice(0, 1).toUpperCase()}
+          </div>
+          <h3>{account.name}</h3>
+          <p>{account.email}</p>
+          <span className="profile-brand">
+            <BrandLogo brand={account.brand} />
+          </span>
+          <hr />
+          <span className="eyebrow">TU WALLET</span>
+          <div className="wallet-status">
+            <Wallet size={21} />
+            <span>
+              Base Sepolia<small>Creación automática pendiente</small>
+            </span>
+          </div>
+          <p className="fine-print">
+            Tu perfil está preparado para crear una wallet con tu correo al
+            conectar el backend.
+          </p>
+          <span className="demo-badge">Cuenta de demostración</span>
+        </div>
+      </div>
+      <div className="club-tabs">
+        {[
+          ["benefits", "Mis beneficios", Ticket],
+          ["activity", "Actividad", Clock],
+          ["favorites", "Favoritas", Heart],
+          ["referrals", "Referidos", Users],
+        ].map(([key, label, Icon]) => {
+          const I = Icon as typeof Ticket;
+          return (
+            <button
+              key={key as string}
+              className={tab === key ? "active" : ""}
+              onClick={() => setTab(key as string)}
+            >
+              <I size={17} />
+              {label as string}
+              {key === "benefits" && <span>{active.length}</span>}
+            </button>
+          );
+        })}
+      </div>
+      {tab === "benefits" && (
+        <>
+          <SectionHead
+            eyebrow="LISTOS PARA LA PRÓXIMA RUTA"
+            title="Tus beneficios."
+          >
+            <div className="segmented">
+              <button
+                className={!used ? "active" : ""}
+                onClick={() => setUsed(false)}
+              >
+                Disponibles ({active.length})
+              </button>
+              <button
+                className={used ? "active" : ""}
+                onClick={() => setUsed(true)}
+              >
+                Utilizados y vencidos
+              </button>
+            </div>
+          </SectionHead>
+          <div className="coupon-grid">
+            {(used
+              ? coupons.filter(
+                  (c) => c.usedAt || new Date(c.expiresAt) <= new Date(),
+                )
+              : active
+            ).map((c) => (
+              <button
+                className="coupon-card"
+                key={c.id}
+                onClick={() => onCoupon(c)}
+              >
+                <div>
+                  <BrandLogo brand={c.brand} />
+                  <span className={`status-pill ${c.usedAt ? "used" : ""}`}>
+                    {c.usedAt
+                      ? "Utilizado"
+                      : new Date(c.expiresAt) <= new Date()
+                        ? "Vencido"
+                        : "Disponible"}
+                  </span>
+                </div>
+                <Ticket size={31} />
+                <h3>{c.title}</h3>
+                <p>
+                  {c.usedAt
+                    ? `Utilizado el ${date(c.usedAt)}`
+                    : `Válido hasta ${date(c.expiresAt)}`}
+                </p>
+                <span className="text-link">
+                  Ver cupón
+                  <ArrowUpRight size={16} />
+                </span>
+              </button>
+            ))}
+          </div>
+          {(used ? coupons.length - active.length : active.length) === 0 && (
+            <Empty
+              title={
+                used
+                  ? "Tu historial de beneficios empieza aquí."
+                  : "Tu próxima recompensa te espera."
+              }
+              text={
+                used
+                  ? "Los cupones utilizados o vencidos se conservarán en esta sección."
+                  : "Canjea tus puntos y encuentra aquí tus cupones disponibles."
+              }
+              onClick={onRewards}
+            />
+          )}
+        </>
+      )}
+      {tab === "activity" && (
+        <>
+          <SectionHead
+            eyebrow="CADA EXPERIENCIA CUENTA"
+            title="Tu actividad."
+          />
+          <div className="activity-list">
+            {history.map((a) => (
+              <ActivityRow key={a.id} activity={a} />
+            ))}
+            {history.length === 0 && (
+              <Empty
+                title="Aún no tienes movimientos."
+                text="Tus compras y canjes aparecerán aquí."
+                onClick={onRewards}
+              />
+            )}
+          </div>
+        </>
+      )}
+      {tab === "favorites" && (
+        <>
+          <SectionHead
+            eyebrow="MOTOS QUE TE HACEN MIRAR DOS VECES"
+            title="Tu lista de deseos."
+          />
+          <div className="bike-grid">
+            {bikes
+              .filter((b) => account.favorites.includes(b.id))
+              .map((b) => (
+                <BikeCard
+                  key={b.id}
+                  bike={b}
+                  favorite
+                  onFavorite={() => onFavorite(b.id)}
+                  onOpen={() => onBike(b)}
+                />
+              ))}
+          </div>
+          {account.favorites.length === 0 && (
+            <Empty
+              title="Guarda esa moto que te gusta."
+              text="Pulsa el corazón en el catálogo para tenerla siempre a mano."
+            />
+          )}
+        </>
+      )}
+      {tab === "referrals" && (
+        <>
+          <SectionHead
+            eyebrow="TU COMUNIDAD CRECE CONTIGO"
+            title="Tus referidos."
+          />
+          <div className="notice">
+            <Users size={24} />
+            <span>
+              Registrarse no acredita puntos automáticamente.
+              <small>
+                El administrador debe confirmar una compra válida para premiar
+                al rider que invitó.
+              </small>
+            </span>
+          </div>
+          <div className="activity-list">
+            {referrals.map((a) => (
+              <div className="activity-row" key={a.id}>
+                <div className="activity-icon">
+                  <Users size={21} />
+                </div>
+                <div>
+                  <strong>{a.name}</strong>
+                  <span>Marca elegida: {a.brand}</span>
+                </div>
+                <span className="status-pill">
+                  {state.activities.some(
+                    (x) =>
+                      x.kind === "Referido" &&
+                      x.label === `Referido confirmado: ${a.id}`,
+                  )
+                    ? "Premiado"
+                    : "Pendiente de compra"}
+                </span>
+              </div>
+            ))}
+          </div>
+          {referrals.length === 0 && (
+            <Empty
+              title="Tu primer compañero aún está por llegar."
+              text="Comparte tu código o enlace de invitación para empezar."
+            />
+          )}
+        </>
+      )}
+    </section>
+  );
+}
+function Empty({
+  title,
+  text,
+  onClick,
+}: {
+  title: string;
+  text: string;
+  onClick?: () => void;
+}) {
+  return (
+    <div className="empty-state">
+      <Gift size={30} />
+      <h3>{title}</h3>
+      <p>{text}</p>
+      {onClick && (
+        <button className="button secondary" onClick={onClick}>
+          Explorar beneficios
+          <ArrowRight size={16} />
+        </button>
+      )}
+    </div>
+  );
+}
+function ActivityRow({ activity: a }: { activity: Activity }) {
+  return (
+    <div className="activity-row">
+      <div className="activity-icon">
+        {a.points > 0 ? (
+          <Coins size={21} />
+        ) : a.points < 0 ? (
+          <Ticket size={21} />
+        ) : (
+          <Check size={21} />
+        )}
+      </div>
+      <div>
+        <strong>
+          {a.label.startsWith("Referido confirmado:")
+            ? "Referido confirmado"
+            : a.label}
+        </strong>
+        <span>
+          {date(a.date)} · {a.brand}
+        </span>
+      </div>
+      <strong className={a.points > 0 ? "positive" : ""}>
+        {a.points > 0 ? "+" : ""}
+        {fmt(a.points)}
+        <small> puntos</small>
+      </strong>
+    </div>
+  );
+}

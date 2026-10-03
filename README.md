@@ -1,19 +1,20 @@
 # RideClub
 
-Frontend de fidelización multimarca para **Zontes, Kiden y NIU**, creado para Hackathon By Paseo 2026.
+Marketplace y club de fidelización para **Zontes, NIU y Kiden**, creado para Hackathon By Paseo 2026.
 
-**Cada compra, una nueva recompensa.** Descubre motos reales, acumula puntos por marca y explora un catálogo de beneficios que se obtienen como cupones NFT de un solo uso.
+**Cada compra, una nueva recompensa.** Descubre nueve motos reales, gana puntos por marca y canjéalos por cupones de beneficios de un solo uso.
 
-![Vista de RideClub](docs/preview-desktop.jpg)
+![RideClub en escritorio](docs/preview-desktop.jpg)
 
-[Vista móvil](docs/preview-mobile.jpg) · [Verificación de esta entrega](docs/QA.md)
+[Vista móvil](docs/preview-mobile.jpg) · [Mi club](docs/preview-club.jpg) · [Recompensas](docs/preview-rewards.jpg) · [Verificación](docs/QA.md)
 
 ## Ejecutar
 
-Requisitos: Node.js 22.12 o superior y npm.
+Node.js 22.12+ y npm.
 
 ```bash
-cd frontend
+git clone https://github.com/ManuelElias1999/RideClub.git
+cd RideClub/frontend
 npm ci
 npm run dev
 ```
@@ -26,62 +27,70 @@ npm run build
 npm run preview
 ```
 
-Si el entorno restringe la enumeración de interfaces de red:
+Para entornos con interfaces de red restringidas:
 
 ```bash
 npm run dev -- --host 127.0.0.1
 ```
 
-## Qué incluye esta etapa
+## Esta entrega
 
-- Catálogo de nueve motos: tres por marca, con fotografías originales y fuentes enlazadas.
-- Filtros por marca, estilo, búsqueda, orden y favoritas.
-- Fichas de producto con especificaciones, precios publicados en USDT cuando existen y enlaces al modelo de origen.
-- Catálogo de nueve **recompensas propuestas**, con reglas, costos, cupos y vigencia de demo.
-- “Mi club”: saldo separado por marca, perfil local, favoritas, referidos, cupones y actividad.
-- Canje de puntos por un cupón NFT **simulado**, con QR legible y código único.
-- Vista de taller/admin para acreditar actividades confirmadas, validar cupones, exportar CSV y reiniciar la demo.
-- Historial que conserva los cupones utilizados, rechaza un segundo uso y valida vencimientos.
-- Diseño responsive, navegación por hash, diálogos accesibles, foco de teclado y reducción de movimiento.
-- Fotos, logos y fuentes alojados dentro del frontend para evitar dependencias de imágenes externas durante la demo.
+- Marketplace de nueve modelos reales: **703F, GK350, GK200**; **NQi Sport MY26, NQiX 300 MY26, NQiX 500 MY26**; **KD150-Z, KD250-V, KD150-GK**.
+- Fotografías y logos de las marcas, tipografía local, filtros por marca/estilo, búsqueda, orden por precio/nombre y favoritas.
+- Fichas con características, fuente y precios publicados en USDT cuando existen. Las consultas comerciales llevan al sitio de origen; no se procesan pagos.
+- Registro local por nombre, correo, marca y **número de referido opcional**; ingreso por correo para cuentas del mismo navegador.
+- Cada cuenta recibe un **número único de ocho dígitos** y un enlace de invitación. El enlace precarga el código al registrarse.
+- Perfil con wallet **pendiente de creación** y configuración preparada para Base Sepolia. No se genera una wallet ficticia ni se guardan claves.
+- “Mi club”: saldo separado por marca, beneficios disponibles/usados/vencidos, favoritas, referidos y actividad.
+- Nueve **recompensas propuestas**: mantenimiento o diagnóstico eléctrico, descuento en repuestos/accesorios y limpieza/revisión visual.
+- Canje local de puntos por cupón con QR. El beneficio se valida una sola vez; se conserva en el historial sin descontar puntos nuevamente.
+- Taller demo para acreditar compras, mantenimientos, referidos y eventos, validar cupones y exportar CSV.
+- Prevención de duplicados de referencias por marca y de recompensas repetidas al mismo referido.
+- Diseño responsive, diálogos nativos, navegación por teclado y reducción de movimiento.
 
-## Recorrido de demostración
+## Recorrido de demo
 
-1. Abre **Mi club**: saldo inicial de **1.000 puntos Zontes**. NIU y Kiden comienzan en cero.
-2. Ve a **Recompensas** y elige **Mantenimiento básico Zontes**, por **500 puntos**.
-3. Confirma: quedan **500 puntos** y un cupón disponible con QR.
-4. Abre el cupón y pulsa **Probar validación en taller**.
-5. En **Validar cupón**, selecciona el cupón y su marca; confirma la autorización del cliente y registra su uso.
-6. En **Mi club → Utilizados y vencidos**, el cupón sigue visible como utilizado. No se descuentan más puntos.
-7. Intenta validar el mismo código nuevamente: la demo lo rechaza.
-8. Para probar NIU o Kiden, registra una compra confirmada de demo en la vista de taller. Cada referencia única se acredita una sola vez por marca.
+1. Pulsa **Únete al club → Entrar a la demo de Manuel**. Empieza con 1.000 puntos Zontes.
+2. En **Recompensas**, filtra Zontes y abre **Mantenimiento básico**, por 500 puntos.
+3. Confirma el canje: quedan 500 puntos y aparece el cupón con QR.
+4. Pulsa **Probar validación en taller**. Confirma la autorización del cliente y el uso.
+5. En **Mi club → Utilizados y vencidos**, el beneficio permanece como utilizado.
+6. Intenta validar el mismo código otra vez: la demo lo rechaza.
 
-## Estado de la integración
+### Probar referidos
 
-**Esta entrega es exclusivamente frontend.** No contiene backend, contratos, autenticación real, pagos ni conexión a una wallet. No procesa compras ni emite tokens/NFTs en ninguna red.
+1. Copia el código de Manuel (**10002026**) o su enlace desde Mi club.
+2. Sal de la demo y crea otra cuenta con un correo de prueba y ese código. La nueva cuenta empieza con cero puntos.
+3. Abre **Taller demo → Acreditar puntos**. Selecciona al cliente invitado, la marca y **Referido**.
+4. Indica una referencia de compra válida y confirma la actividad. Se acreditan 200 puntos al invitador, una sola vez por invitado.
+5. Ingresa a la demo de Manuel para consultar sus referidos y el saldo actualizado.
 
-Los saldos y cupones se guardan en `localStorage`, únicamente en el navegador actual. El panel administrativo es una simulación accesible para demostrar el flujo; no es un control de permisos de producción. El QR identifica un cupón de demo, no es una prueba criptográfica de titularidad.
+La opción **Sobre la demo y sus fuentes → Reiniciar datos de esta demo** restablece los datos locales.
 
-La siguiente etapa usará **EVM sobre Base Sepolia (chain ID 84532)**. Se prevén puntos tokenizados y cupones ERC-721 que se consumen en una función autorizada de canje, con confirmación del cliente y del taller. Esa integración debe reemplazar los estados locales, validar roles y actividades en el servidor y registrar eventos verificables.
+## Estado de backend y blockchain
 
-## Datos comerciales y marcas
+**Esta etapa es frontend.** No incluye backend, verificación de correo, autenticación segura, contratos, pagos, wallets, tokens ni NFTs reales. Los puntos y cupones se guardan en `localStorage` del navegador actual; no se comparten entre dispositivos.
 
-Zontes y NIU tienen fuentes locales de Bolivia. Los tres modelos Kiden son referencias de distribuidores en Argentina y Sudáfrica, **sin afirmar disponibilidad local**. Las recompensas, porcentajes de descuento, saldos, existencias y reglas de acumulación son propuestas de hackathon que requieren aprobación de las marcas.
+El taller demo tiene acceso libre para probar el flujo. Su casilla de autorización no sustituye una verificación de titularidad; el QR solo identifica el cupón local.
 
-Precios y especificaciones son referencias de las páginas consultadas el **3 de octubre de 2026**. No se realiza conversión entre USDT y bolivianos. Algunos sitios fuente tienen inconsistencias: se omiten las cifras ambiguas en vez de presentarlas como especificaciones confirmadas.
+La siguiente etapa integrará **EVM en Base Sepolia (chain ID 84532)**: registro por correo con creación automática de wallet, puntos tokenizados y cupones ERC-721 que se consumen y queman con autorización del cliente y del taller. Se prevé descontar puntos y emitir el NFT en una sola transacción. Los cupones usados conservarán su historial.
 
-Ver [fuentes y recursos visuales](docs/SOURCES.md) y [arquitectura de frontend](docs/ARCHITECTURE.md).
+## Datos de las marcas
+
+Zontes y NIU usan catálogos locales de Bolivia. Kiden usa referencias de MotoFun Argentina y del catálogo oficial internacional; **su disponibilidad en Bolivia no está confirmada**. Los beneficios, descuentos, reglas, cupos y vigencias son propuestas para la hackathon, pendientes de aprobación comercial.
+
+Consulta de fuentes: 3 de octubre de 2026. Ver [modelos, fuentes y recursos visuales](docs/SOURCES.md) y [arquitectura e integración futura](docs/ARCHITECTURE.md).
 
 ## Estructura
 
 ```text
 frontend/
-  public/assets/       Fotografías, logos y tipografías locales
-  src/components/      Catálogo, recompensas, club, taller y diálogos
-  src/data/catalog.ts  Productos, fuentes y recompensas propuestas
-  src/lib/demo.ts      Transiciones de la demo y persistencia
-  src/lib/demo.test.ts Pruebas del flujo de puntos y cupones
-  src/App.tsx          Navegación y composición de la aplicación
-  src/styles.css       Identidad visual y diseño responsive
-docs/
+  public/assets/       Fotos, logos y tipografía locales
+  src/components/      Marketplace, recompensas, registro, club y taller
+  src/data/catalog.ts  Modelos, fuentes, beneficios y reglas propuestas
+  src/lib/demo.ts      Cuentas, referidos, puntos y ciclo de cupones
+  src/lib/demo.test.ts Pruebas del flujo de demo
+  src/App.tsx          Navegación, composición y persistencia
+  src/styles.css       Diseño responsive
+docs/                  Arquitectura, fuentes, capturas y verificación
 ```

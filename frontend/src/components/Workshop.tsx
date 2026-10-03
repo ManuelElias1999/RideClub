@@ -1,0 +1,374 @@
+import { useState, type FormEvent } from "react";
+import {
+  BarChart3,
+  Coins,
+  Ticket,
+  Users,
+  Check,
+  Download,
+  Wrench,
+} from "lucide-react";
+import {
+  brands,
+  pointsRules,
+  type Brand,
+  type ActivityKind,
+} from "../data/catalog";
+import type { Demo } from "../lib/demo";
+import { date, fmt, SectionHead } from "./ui";
+export default function Workshop({
+  state,
+  couponCode,
+  onCredit,
+  onUse,
+  onExport,
+}: {
+  state: Demo;
+  couponCode: string;
+  onCredit: (
+    accountId: string,
+    brand: Brand,
+    kind: ActivityKind,
+    ref: string,
+    confirmed: boolean,
+  ) => boolean;
+  onUse: (
+    id: string,
+    brand: Brand,
+    confirmed: boolean,
+    workshop: string,
+  ) => boolean;
+  onExport: () => void;
+}) {
+  const [client, setClient] = useState(
+    state.currentId ?? state.accounts[0]?.id ?? "",
+  );
+  const [brand, setBrand] = useState<Brand>("Zontes");
+  const [kind, setKind] = useState<ActivityKind>("Compra");
+  const [ref, setRef] = useState("");
+  const [confirmed, setConfirmed] = useState(false);
+  const [code, setCode] = useState(couponCode);
+  const [useBrand, setUseBrand] = useState<Brand>(
+    state.coupons.find((c) => c.id === couponCode)?.brand ?? "Zontes",
+  );
+  const [consent, setConsent] = useState(false);
+  const [workshop, setWorkshop] = useState("Taller RideClub · demo");
+  const [result, setResult] = useState("");
+  const [creditResult, setCreditResult] = useState("");
+  const creditSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    if (onCredit(client, brand, kind, ref, confirmed)) {
+      setRef("");
+      setConfirmed(false);
+      setCreditResult(
+        "Actividad acreditada. El saldo y el historial del cliente ya se actualizaron.",
+      );
+    }
+  };
+  const useSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    if (onUse(code.trim().toUpperCase(), useBrand, consent, workshop)) {
+      setConsent(false);
+      setResult(
+        "Cupón utilizado. Se conserva en el historial y un segundo uso será rechazado.",
+      );
+    }
+  };
+  const c = state.coupons.find((c) => c.id === code.trim().toUpperCase());
+  return (
+    <section className="page-section workshop-page">
+      <div className="page-intro">
+        <span className="eyebrow">EL OTRO LADO DE LA EXPERIENCIA</span>
+        <h1>
+          El club, en tus manos<span className="lime">.</span>
+        </h1>
+        <p>
+          Registra actividades y acompaña al cliente en su próximo beneficio.
+        </p>
+      </div>
+      <div className="proposal-note">
+        <Wrench size={20} />
+        <span>
+          <strong>Panel de taller de demostración.</strong> Acceso libre para
+          probar el frontend. Roles, confirmaciones y permisos reales se
+          implementarán en el backend.
+        </span>
+      </div>
+      <div className="metrics">
+        {[
+          [Users, state.accounts.length, "Riders en el club"],
+          [
+            Coins,
+            state.accounts.reduce(
+              (s, a) => s + brands.reduce((n, b) => n + a.points[b], 0),
+              0,
+            ),
+            "Puntos disponibles",
+          ],
+          [
+            Ticket,
+            state.coupons.filter(
+              (c) => !c.usedAt && new Date(c.expiresAt) > new Date(),
+            ).length,
+            "Cupones disponibles",
+          ],
+          [
+            BarChart3,
+            state.coupons.filter((c) => c.usedAt).length,
+            "Beneficios utilizados",
+          ],
+        ].map(([Icon, n, label]) => {
+          const I = Icon as typeof Users;
+          return (
+            <div className="metric" key={label as string}>
+              <I size={22} />
+              <strong>{fmt(n as number)}</strong>
+              <span>{label as string}</span>
+            </div>
+          );
+        })}
+      </div>
+      <div className="workshop-forms">
+        <form className="panel stack-form" onSubmit={creditSubmit}>
+          <div className="panel-heading">
+            <Coins size={24} />
+            <div>
+              <span className="eyebrow">CADA ACTIVIDAD SUMA</span>
+              <h2>Acreditar puntos</h2>
+            </div>
+          </div>
+          <label>
+            Cliente
+            <select aria-label="Cliente" value={client} onChange={(e) => setClient(e.target.value)}>
+              {state.accounts.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.name} · {a.email}
+                </option>
+              ))}
+            </select>
+          </label>
+          <div className="form-row">
+            <label>
+              Marca
+              <select
+                aria-label="Marca"
+                value={brand}
+                onChange={(e) => setBrand(e.target.value as Brand)}
+              >
+                {brands.map((b) => (
+                  <option key={b}>{b}</option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Actividad
+              <select
+                aria-label="Actividad"
+                value={kind}
+                onChange={(e) => setKind(e.target.value as ActivityKind)}
+              >
+                {Object.keys(pointsRules).map((k) => (
+                  <option key={k}>{k}</option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <div className="award-summary">
+            <span>Puntos propuestos</span>
+            <strong>
+              +{fmt(pointsRules[kind])} {brand}
+            </strong>
+          </div>
+          {kind === "Referido" && (
+            <p className="fine-print">
+              Selecciona al cliente invitado cuya compra se confirmó. Los 200
+              puntos se acreditarán a quien lo refirió; solo una recompensa por
+              invitado.
+            </p>
+          )}
+          <label>
+            Referencia de actividad
+            <input
+              value={ref}
+              onChange={(e) => {
+                setRef(e.target.value);
+                setCreditResult("");
+              }}
+              required
+              minLength={3}
+              maxLength={80}
+              placeholder="Ej. FACTURA-2026-002"
+            />
+            <small>
+              Una referencia solo puede acreditarse una vez por marca.
+            </small>
+          </label>
+          <label className="checkbox-field">
+            <input
+              type="checkbox"
+              checked={confirmed}
+              onChange={(e) => setConfirmed(e.target.checked)}
+              required
+            />
+            <span>La actividad está confirmada por la tienda.</span>
+          </label>
+          {creditResult && (
+            <p role="status" className="form-success">
+              <Check size={16} />
+              {creditResult}
+            </p>
+          )}
+          <button className="button dark full" type="submit">
+            Acreditar puntos de demo
+            <Coins size={18} />
+          </button>
+        </form>
+        <form className="panel stack-form" onSubmit={useSubmit}>
+          <div className="panel-heading">
+            <Ticket size={24} />
+            <div>
+              <span className="eyebrow">UN BENEFICIO. UN SOLO USO.</span>
+              <h2>Validar cupón</h2>
+            </div>
+          </div>
+          <label>
+            Código de cupón
+            <input
+              value={code}
+              onChange={(e) => {
+                setCode(e.target.value);
+                setResult("");
+              }}
+              required
+              placeholder="RC-…"
+            />
+          </label>
+          <label>
+            O selecciona un cupón de la demo
+            <select
+              aria-label="Seleccionar cupón"
+              value={state.coupons.some((x) => x.id === code) ? code : ""}
+              onChange={(e) => {
+                setCode(e.target.value);
+                setUseBrand(
+                  state.coupons.find((x) => x.id === e.target.value)?.brand ??
+                    "Zontes",
+                );
+                setResult("");
+              }}
+            >
+              <option value="">Selecciona un cupón</option>
+              {state.coupons.map((x) => (
+                <option key={x.id} value={x.id}>
+                  {x.brand} · {x.title} · {x.usedAt ? "Utilizado" : "Emitido"} ·{" "}
+                  {x.id.slice(0, 11)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <div className="form-row">
+            <label>
+              Marca del taller
+              <select
+                aria-label="Marca del taller"
+                value={useBrand}
+                onChange={(e) => setUseBrand(e.target.value as Brand)}
+              >
+                {brands.map((b) => (
+                  <option key={b}>{b}</option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Nombre del taller
+              <input
+                value={workshop}
+                onChange={(e) => setWorkshop(e.target.value)}
+                maxLength={80}
+                required
+              />
+            </label>
+          </div>
+          {c && (
+            <div className="coupon-preview">
+              <strong>{c.title}</strong>
+              <span>
+                {state.accounts.find((a) => a.id === c.ownerId)?.name} ·{" "}
+                {c.brand}
+              </span>
+              <small>
+                {c.usedAt
+                  ? `Utilizado el ${date(c.usedAt)}`
+                  : `Válido hasta ${date(c.expiresAt)}`}
+              </small>
+            </div>
+          )}
+          <label className="checkbox-field">
+            <input
+              type="checkbox"
+              checked={consent}
+              onChange={(e) => setConsent(e.target.checked)}
+              required
+            />
+            <span>
+              Comprobé al titular y el cliente autoriza usar este cupón.
+            </span>
+          </label>
+          <p className="fine-print">
+            La demo comprueba marca, vigencia y uso previo. En producción,
+            titularidad y autorización deben verificarse en el servidor y el
+            contrato.
+          </p>
+          {result && (
+            <p role="status" className="form-success">
+              <Check size={16} />
+              {result}
+            </p>
+          )}
+          <button type="submit" className="button primary full">
+            Confirmar uso del cupón
+            <Check size={18} />
+          </button>
+        </form>
+      </div>
+      <SectionHead eyebrow="MOVIMIENTOS DEL CLUB" title="Actividad reciente.">
+        <button className="button secondary small" onClick={onExport}>
+          <Download size={16} /> Exportar CSV
+        </button>
+      </SectionHead>
+      <div className="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Cliente</th>
+              <th>Actividad</th>
+              <th>Marca</th>
+              <th>Puntos</th>
+              <th>Fecha</th>
+            </tr>
+          </thead>
+          <tbody>
+            {state.activities.map((a) => (
+              <tr key={a.id}>
+                <td>
+                  {state.accounts.find((x) => x.id === a.accountId)?.name}
+                </td>
+                <td>
+                  {a.label.startsWith("Referido confirmado:")
+                    ? "Referido confirmado"
+                    : a.label}
+                </td>
+                <td>{a.brand}</td>
+                <td className={a.points > 0 ? "positive" : ""}>
+                  {a.points > 0 ? "+" : ""}
+                  {fmt(a.points)}
+                </td>
+                <td>{date(a.date)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
