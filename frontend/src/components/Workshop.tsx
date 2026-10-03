@@ -28,13 +28,13 @@ export default function Workshop({
     kind: ActivityKind,
     ref: string,
     confirmed: boolean,
-  ) => boolean;
+  ) => boolean | Promise<boolean>;
   onUse: (
     id: string,
     brand: Brand,
     confirmed: boolean,
     workshop: string,
-  ) => boolean;
+  ) => boolean | Promise<boolean>;
   onExport: () => void;
   companyBrand?: Brand;
 }) {
@@ -59,9 +59,9 @@ export default function Workshop({
   const activeRules =
     allCompanies.find((company) => company.name === brand)?.pointRules ??
     allCompanies[0]?.pointRules;
-  const creditSubmit = (e: FormEvent) => {
+  const creditSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (onCredit(client, brand, kind, ref, confirmed)) {
+    if (await onCredit(client, brand, kind, ref, confirmed)) {
       setRef("");
       setConfirmed(false);
       setCreditResult(
@@ -69,9 +69,9 @@ export default function Workshop({
       );
     }
   };
-  const useSubmit = (e: FormEvent) => {
+  const useSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (onUse(code.trim().toUpperCase(), useBrand, consent, workshop)) {
+    if (await onUse(code.trim().toUpperCase(), useBrand, consent, workshop)) {
       setConsent(false);
       setResult(
         "Cupón utilizado. Se conserva en el historial y un segundo uso será rechazado.",
@@ -93,9 +93,8 @@ export default function Workshop({
       <div className="proposal-note">
         <Wrench size={20} />
         <span>
-          <strong>Panel de taller de demostración.</strong> Acceso con rol
-          administrador de demo. La autenticación y los permisos reales se
-          implementarán en el backend.
+          <strong>Panel operativo.</strong> Solo una empresa autorizada o la
+          administración global puede acreditar puntos y validar cupones.
         </span>
       </div>
       <div className="metrics">

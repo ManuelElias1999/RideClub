@@ -47,6 +47,16 @@ import Auth from "./components/Auth";
 import Workshop from "./components/Workshop";
 import Landing from "./components/Landing";
 import { BrandLogo, Modal } from "./components/ui";
+import { normalizePhone } from "./lib/phone";
+import { supabaseClient, supabaseEnabled } from "./lib/supabase/client";
+import {
+  backendApi,
+  loadBackendState,
+  logoutBackend,
+  requestLogin,
+  requestRegistration,
+  syncBusinessMutation,
+} from "./lib/supabase/api";
 type Page =
   | "inicio"
   | "marketplace"
@@ -62,7 +72,19 @@ const getPage = (): Page => {
     : "inicio";
 };
 export default function App() {
-  const [state, setState] = useState<Demo>(loadDemo);
+  const [state, setState] = useState<Demo>(() => {
+    if (!supabaseEnabled) return loadDemo();
+    const publicState = initialDemo();
+    return {
+      ...publicState,
+      accounts: [],
+      currentId: null,
+      coupons: [],
+      activities: [],
+      purchases: [],
+      audit: [],
+    };
+  });
   const stateRef = useRef(state);
   const storageSync = useRef(false);
   stateRef.current = state;
@@ -79,6 +101,7 @@ export default function App() {
   const [auth, setAuth] = useState(false);
   const [created, setCreated] = useState<Account>();
   const [authError, setAuthError] = useState("");
+  const [authNotice, setAuthNotice] = useState("");
   const [bike, setBike] = useState<Bike>();
   const [reward, setReward] = useState<Reward>();
   const [rewardError, setRewardError] = useState("");
@@ -95,6 +118,11 @@ export default function App() {
     stateRef.current = next;
     setState(next);
   };
+  const refreshBackend = async () => {
+    const next = await loadBackendState();
+    commit(next);
+    return next;
+  };
   const apply = (fn: (s: Demo) => Demo) => {
     try {
       commit(fn(stateRef.current));
@@ -105,6 +133,7 @@ export default function App() {
     }
   };
   useEffect(() => {
+    if (supabaseEnabled) return;
     if (storageSync.current) {
       storageSync.current = false;
       return;
@@ -118,6 +147,7 @@ export default function App() {
     }
   }, [state]);
   useEffect(() => {
+    if (supabaseEnabled) return;
     const sync = (event: StorageEvent) => {
       if (event.key !== storageKey || !event.newValue) return;
       const incoming = loadDemo();
@@ -131,6 +161,45 @@ export default function App() {
     };
     window.addEventListener("storage", sync);
     return () => window.removeEventListener("storage", sync);
+  }, []);
+  useEffect(() => {
+    if (!supabaseEnabled) return;
+    let active = true;
+    const refresh = async () => {
+      try {
+        const next = await loadBackendState();
+        if (active) commit(next);
+        return next;
+      } catch (error) {
+        if (active) {
+          commit({ ...stateRef.current, currentId: null });
+          setToast((error as Error).message);
+        }
+        return undefined;
+      }
+    };
+    void refresh();
+    const { data } = supabaseClient().auth.onAuthStateChange((event) => {
+      window.setTimeout(() => {
+        void (async () => {
+          const next = await refresh();
+          if (event !== "SIGNED_IN" || !next?.currentId) return;
+          const role = next.accounts.find(
+            (item) => item.id === next.currentId,
+          )?.role;
+          navigate(
+            role === "admin" ? "admin" : role === "company" ? "empresa" : "club",
+          );
+          setAuth(false);
+        })();
+      }, 0);
+    });
+    window.addEventListener("focus", refresh);
+    return () => {
+      active = false;
+      window.removeEventListener("focus", refresh);
+      data.subscription.unsubscribe();
+    };
   }, []);
   useEffect(() => {
     const current = state.accounts.find((item) => item.id === state.currentId);
@@ -176,17 +245,35 @@ export default function App() {
   const dashboardPage: Page = account?.role === "company" ? "empresa" : "admin";
   const dashboardProps = {
     state,
-    onMutation: (fn: (s: Demo) => Demo): string | null => {
+    onMutation: async (fn: (s: Demo) => Demo): Promise<string | null> => {
       try {
-        commit(fn(stateRef.current));
+        const before = stateRef.current;
+        const next = fn(before);
+        commit(next);
+        if (supabaseEnabled) {
+          await syncBusinessMutation(before, next);
+          await refreshBackend();
+        }
         return null;
       } catch (e) {
+        if (supabaseEnabled) {
+          try {
+            await refreshBackend();
+          } catch {
+            /* Keep the last usable snapshot while reporting the original error. */
+          }
+        }
         return (e as Error).message;
       }
     },
-    onLogout: () => {
-      commit({ ...stateRef.current, currentId: null });
-      navigate("inicio");
+    onLogout: async () => {
+      try {
+        if (supabaseEnabled) await logoutBackend();
+        commit({ ...stateRef.current, currentId: null });
+        navigate("inicio");
+      } catch (error) {
+        setToast((error as Error).message);
+      }
     },
     onWorkshop: () => navigate("taller"),
   };
@@ -221,6 +308,7 @@ export default function App() {
   function openAuth(mode: "login" | "register" = "register") {
     setAuthMode(mode);
     setAuthError("");
+    setAuthNotice("");
     setCreated(undefined);
     setReward(undefined);
     setBike(undefined);
@@ -231,9 +319,19 @@ export default function App() {
     setRewardError("");
     setReward(r);
   }
-  function confirmReward() {
+  async function confirmReward() {
     if (!reward || !account) return;
     try {
+      if (supabaseEnabled) {
+        const redeemed = (await backendApi.redeem(reward.id)) as {
+          code: string;
+        };
+        const next = await refreshBackend();
+        setReward(undefined);
+        setCoupon(next.coupons.find((item) => item.id === redeemed.code));
+        setToast("Tu cupón está listo. El saldo de puntos se actualizó.");
+        return;
+      }
       const result = redeem(stateRef.current, account.id, reward);
       commit(result.state);
       setReward(undefined);
@@ -308,6 +406,18 @@ export default function App() {
   const onFavorite = (id: string) => {
     if (!account) {
       openAuth();
+      return;
+    }
+    const selected = !account.favorites.includes(id);
+    if (supabaseEnabled) {
+      void (async () => {
+        try {
+          await backendApi.favorite(account.id, id, selected);
+          await refreshBackend();
+        } catch (error) {
+          setToast((error as Error).message);
+        }
+      })();
       return;
     }
     apply((s) => ({
@@ -456,8 +566,16 @@ export default function App() {
             state={state}
             onJoin={openAuth}
             onLogout={() => {
-              commit({ ...stateRef.current, currentId: null });
-              setToast("Saliste de la demo. Puedes volver con tu correo.");
+              void (async () => {
+                try {
+                  if (supabaseEnabled) await logoutBackend();
+                  commit({ ...stateRef.current, currentId: null });
+                  setToast("Cerraste sesión correctamente.");
+                  navigate("inicio");
+                } catch (error) {
+                  setToast((error as Error).message);
+                }
+              })();
             }}
             onRewards={() => rewardNavigate()}
             onCoupon={setCoupon}
@@ -466,10 +584,42 @@ export default function App() {
             onCopy={copy}
             onBrand={rewardNavigate}
             onLinkBrand={(b) => {
+              if (supabaseEnabled) {
+                const company = stateRef.current.companies.find(
+                  (item) => item.name === b,
+                );
+                if (!company) return;
+                void (async () => {
+                  try {
+                    await backendApi.updateProfile(
+                      account!.name,
+                      account!.phone,
+                      company.id,
+                    );
+                    await refreshBackend();
+                    setToast(`Tu perfil está vinculado a ${b}.`);
+                  } catch (error) {
+                    setToast((error as Error).message);
+                  }
+                })();
+                return;
+              }
               if (apply((s) => linkBrand(s, account!.id, b)))
                 setToast(`Tu perfil está vinculado a ${b}.`);
             }}
             onFund={() => {
+              if (supabaseEnabled) {
+                void (async () => {
+                  try {
+                    await backendApi.fund();
+                    await refreshBackend();
+                    setToast("Se añadieron 20.000 USDT de prueba a tu saldo.");
+                  } catch (error) {
+                    setToast((error as Error).message);
+                  }
+                })();
+                return;
+              }
               if (apply((s) => fundDemo(s, account!.id)))
                 setToast("Se añadieron 20.000 USDT de prueba a tu saldo.");
             }}
@@ -504,7 +654,7 @@ export default function App() {
                 >
                   Volver a mi empresa
                 </button>
-              ) : page === "admin" ? (
+              ) : page === "admin" && !supabaseEnabled ? (
                 <button
                   className="button primary"
                   onClick={() => {
@@ -533,8 +683,22 @@ export default function App() {
                 account?.role === "company" ? account.brand : undefined
               }
               couponCode={workshopCode}
-              onCredit={(a, b, k, r, c) =>
-                apply((s) => {
+              onCredit={async (a, b, k, r, c) => {
+                if (supabaseEnabled) {
+                  try {
+                    const company = stateRef.current.companies.find(
+                      (item) => item.name === b,
+                    );
+                    if (!company) throw Error("La empresa no existe.");
+                    await backendApi.credit(a, company.id, k, r, c);
+                    await refreshBackend();
+                    return true;
+                  } catch (error) {
+                    setToast((error as Error).message);
+                    return false;
+                  }
+                }
+                return apply((s) => {
                   manageBrand(s, b);
                   if (
                     s.accounts.find((x) => x.id === s.currentId)?.role ===
@@ -545,14 +709,24 @@ export default function App() {
                       "Este cliente no pertenece al ámbito de tu empresa.",
                     );
                   return credit(s, a, b, k, r, c);
-                })
-              }
-              onUse={(id, b, c, w) =>
-                apply((s) => {
+                });
+              }}
+              onUse={async (couponId, b, c, w) => {
+                if (supabaseEnabled) {
+                  try {
+                    await backendApi.useCoupon(couponId, w, c);
+                    await refreshBackend();
+                    return true;
+                  } catch (error) {
+                    setToast((error as Error).message);
+                    return false;
+                  }
+                }
+                return apply((s) => {
                   manageBrand(s, b);
-                  return useCoupon(s, id, b, c, w);
-                })
-              }
+                  return useCoupon(s, couponId, b, c, w);
+                });
+              }}
               onExport={exportCSV}
             />
           ) : (
@@ -571,10 +745,9 @@ export default function App() {
                 Iniciar sesión <ChevronRight size={18} />
               </button>
               <p className="fine-print">
-                Cambiarás a una cuenta de prueba con rol administrador. Tus
-                datos de cliente se conservan; puedes volver ingresando con tu
-                correo. Los roles son una simulación local, sin autenticación
-                segura.
+                {supabaseEnabled
+                  ? "El acceso requiere una cuenta activa con rol de empresa o administrador. Los permisos se validan nuevamente en el servidor."
+                  : "En modo local puedes usar la cuenta administradora de prueba. Tus datos de cliente se conservan y puedes volver ingresando con su correo."}
               </p>
             </section>
           ))}
@@ -626,7 +799,11 @@ export default function App() {
             Sobre la demo y sus fuentes
             <ArrowUpRight size={13} />
           </button>
-          <span>Próxima integración: Base Sepolia</span>
+          <span>
+            {supabaseEnabled
+              ? "Backend conectado · próxima integración: Base Sepolia"
+              : "Modo local · configura Supabase para persistencia compartida"}
+          </span>
         </div>
       </footer>
       {toast && (
@@ -670,6 +847,26 @@ export default function App() {
             navigate("club");
           }}
           onConfirm={() => {
+            if (supabaseEnabled) {
+              void (async () => {
+                try {
+                  await backendApi.purchase(
+                    checkout.bike.id,
+                    checkout.operationId,
+                  );
+                  const next = await refreshBackend();
+                  setPurchase(
+                    next.purchases.find(
+                      (item) => item.operationId === checkout.operationId,
+                    ),
+                  );
+                  setPurchaseError("");
+                } catch (error) {
+                  setPurchaseError((error as Error).message);
+                }
+              })();
+              return;
+            }
             try {
               const result = buy(
                 stateRef.current,
@@ -710,14 +907,30 @@ export default function App() {
       {auth && (
         <Auth
           initialMode={authMode}
+          backendMode={supabaseEnabled}
           onClose={() => {
             setAuth(false);
             if (created) navigate("club");
           }}
           created={created}
           error={authError}
-          onRegister={(n, e, phone, c, b) => {
+          notice={authNotice}
+          onRegister={async (n, e, phone, c, b) => {
             try {
+              if (supabaseEnabled) {
+                await requestRegistration({
+                  name: n,
+                  email: e,
+                  phone: normalizePhone(phone),
+                  brand: b,
+                  referralCode: c,
+                });
+                setAuthNotice(
+                  "Revisa tu correo y abre el enlace para terminar el registro. El enlace iniciará tu sesión en este dispositivo.",
+                );
+                setAuthError("");
+                return;
+              }
               const next = register(stateRef.current, n, e, phone, c, b);
               commit(next);
               setCreated(next.accounts.find((a) => a.id === next.currentId));
@@ -726,8 +939,16 @@ export default function App() {
               setAuthError((e as Error).message);
             }
           }}
-          onLogin={(e) => {
+          onLogin={async (e) => {
             try {
+              if (supabaseEnabled) {
+                await requestLogin(e);
+                setAuthNotice(
+                  "Te enviamos un enlace de acceso. Ábrelo desde este navegador para entrar.",
+                );
+                setAuthError("");
+                return;
+              }
               const next = login(stateRef.current, e);
               commit(next);
               setAuth(false);
@@ -821,30 +1042,30 @@ export default function App() {
           </p>
           <h4>Qué puedes probar</h4>
           <p className="fine-print">
-            Registro local por correo, celular y marca vinculada, referido de 8
-            dígitos, compras con USDT de prueba, favoritas, puntos por marca,
-            canje con QR y validación de un solo uso. La demo de Manuel empieza
-            con 1.000 puntos Zontes; las cuentas nuevas empiezan con cero puntos
-            y 20.000 USDT ficticios para probar compras.
+            {supabaseEnabled
+              ? "Registro verificado por correo, celular y marca vinculada, referido de 8 dígitos, compras con USDT de prueba, favoritas, puntos por marca, canje con QR, dashboards y validación de un solo uso. Las cuentas nuevas empiezan con cero puntos y 20.000 USDT ficticios."
+              : "Registro local por correo, celular y marca vinculada, referido de 8 dígitos, compras con USDT de prueba, favoritas, puntos por marca, canje con QR y validación de un solo uso. La demo de Manuel empieza con 1.000 puntos Zontes; las cuentas nuevas empiezan con cero puntos y 20.000 USDT ficticios."}
           </p>
           <h4>Siguiente etapa</h4>
           <p className="fine-print">
-            Autenticación por correo, creación automática de wallet EVM, backend
-            y contratos en Base Sepolia. Actualmente no se crean wallets, tokens
-            ni NFTs reales.
+            {supabaseEnabled
+              ? "La autenticación por correo y el backend persistente ya están conectados. La siguiente etapa es crear las wallets EVM y los contratos en Base Sepolia; todavía no se crean tokens ni NFTs reales."
+              : "El proyecto conserva un modo local para presentar la interfaz. Al configurar Supabase habilita autenticación por correo, persistencia compartida y seguridad por roles. La blockchain se implementará después."}
           </p>
-          <button
-            className="button secondary full"
-            onClick={() => {
-              commit(initialDemo());
-              setInfo(false);
-              setToast(
-                "Demo reiniciada. Las cuentas, canjes y actividades locales volvieron al estado inicial.",
-              );
-            }}
-          >
-            Reiniciar datos de esta demo
-          </button>
+          {!supabaseEnabled && (
+            <button
+              className="button secondary full"
+              onClick={() => {
+                commit(initialDemo());
+                setInfo(false);
+                setToast(
+                  "Demo reiniciada. Las cuentas, canjes y actividades locales volvieron al estado inicial.",
+                );
+              }}
+            >
+              Reiniciar datos de esta demo
+            </button>
+          )}
         </Modal>
       )}
     </CatalogProvider>

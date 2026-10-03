@@ -33,10 +33,14 @@ export function BikeCard({
       className="bike-card brand-product-card"
       style={{ "--brand-accent": identity?.color ?? "#c6f46a" } as CSSProperties}
     >
-      <div className="bike-image">
-        <span className="card-brand-signature">
-          <BrandLogo brand={bike.brand} />
+      <div className="bike-company-identity">
+        <BrandLogo brand={bike.brand} />
+        <span>
+          <strong>{bike.brand}</strong>
+          <small>{identity?.subtitle ?? "Empresa RideClub"}</small>
         </span>
+      </div>
+      <div className="bike-image">
         <span
           className={`category-tag ${bike.brand === "NIU" ? "electric" : ""}`}
         >
@@ -207,10 +211,6 @@ export default function Marketplace({
   const [sort, setSort] = useState("featured");
   const [onlyFav, setOnlyFav] = useState(false);
   const selectedCompany = filter === "Todas" ? undefined : brandInfo[filter];
-  const featured =
-    (filter !== "Todas" && bikes.find((bike) => bike.brand === filter)) ||
-    bikes.find((bike) => bike.id === "z703f") ||
-    bikes[0];
   const visible = bikes
     .filter(
       (b) =>
@@ -237,147 +237,52 @@ export default function Marketplace({
           : undefined
       }
     >
-      <section
-        className={`hero ${selectedCompany ? "brand-hero" : ""}`}
-        style={
-          selectedCompany
-            ? ({ "--brand-accent": selectedCompany.color } as CSSProperties)
-            : undefined
-        }
-      >
-        <div className="hero-copy">
-          {selectedCompany && (
-            <div className="hero-brand-identity">
-              <BrandLogo brand={filter} />
-              <span>MARKETPLACE OFICIAL DE {filter.toUpperCase()}</span>
-            </div>
-          )}
-          <div className="hero-label">
-            <span /> EL CLUB DE LOS QUE SIGUEN RODANDO
-          </div>
-          <h1>
-            {selectedCompany ? filter : "Tu próxima ruta."}
-            <br />
-            <em>
-              {selectedCompany
-                ? selectedCompany.subtitle
-                : "Más recompensas."}
-            </em>
-          </h1>
-          <p>
-            {selectedCompany
-              ? `Explora las motos, puntos y beneficios de ${filter}.`
-              : "Encuentra tu moto. Vive la experiencia."}
-            <br />
-            Convierte cada compra en algo que te lleve más lejos.
-          </p>
-          <div className="hero-actions">
-            <a href="#catalogo" className="button primary">
-              Explorar motos <ArrowUpRight size={19} />
-            </a>
-            <button className="hero-link" onClick={onRewards}>
-              Descubrir beneficios <ArrowRight size={17} />
-            </button>
-          </div>
-          <div className="hero-bottom">
-            <div>
-              <strong>{String(brands.length).padStart(2, "0")}</strong>
-              <span>marcas. Un solo club.</span>
-            </div>
-            <div className="mini-brand-list">
-              {brands.slice(0, 4).map((b) => (
-                <BrandLogo key={b} brand={b} />
-              ))}
-            </div>
-          </div>
-        </div>
-        <div className="hero-visual">
-          <span className="hero-watermark" aria-hidden="true">
-            {featured?.name ?? "RIDE"}
-          </span>
-          <span className="hero-product-label">
-            <span>{featured?.brand ?? "RIDECLUB"}</span>{" "}
-            {featured?.category ?? "TU PRÓXIMA RUTA"}
-          </span>
-          <img
-            className="hero-bike"
-            src={featured?.image ?? "/assets/motorcycle-placeholder.svg"}
-            alt={
-              featured
-                ? `${featured.brand} ${featured.name}`
-                : "Moto ilustrativa"
-            }
-          />
-          <div className="hero-model">
-            <span>Para ir más allá.</span>
-            <button
-              disabled={!featured}
-              onClick={() => featured && onBike(featured)}
-            >
-              Conoce {featured?.name ?? "el catálogo"}{" "}
-              <ArrowUpRight size={17} />
-            </button>
-          </div>
-          <button className="hero-reward" onClick={onJoin}>
-            <span className="reward-dot">
-              <Gift size={21} />
-            </span>
-            <span>
-              Rodar tiene sus beneficios.
-              <strong>
-                Únete a RideClub <ArrowRight size={15} />
-              </strong>
-            </span>
-          </button>
-          <div className="hero-index">
-            <span>01</span> / RIDE MORE. GET MORE.
-          </div>
-        </div>
-      </section>
-      <section className="brand-strip">
-        <span>
-          MÁS FORMAS DE MOVERTE.
-          <br />
-          <strong>UNA MISMA PASIÓN.</strong>
-        </span>
-        {brands.map((b) => (
-          <button
-            key={b}
-            onClick={() => {
-              setFilter(b);
-              document
-                .getElementById("catalogo")
-                ?.scrollIntoView({ behavior: "smooth" });
-            }}
-          >
-            <BrandLogo brand={b} />
-            <span>{brandInfo[b].subtitle}</span>
-            <ArrowUpRight size={18} />
-          </button>
-        ))}
-      </section>
-      <section id="catalogo" className="catalog-section">
+      <section id="catalogo" className="catalog-section marketplace-direct-catalog">
         <SectionHead
-          eyebrow="ENCUENTRA TU PRÓXIMA MOTO"
-          title="Elige cómo quieres rodar."
+          eyebrow="MARKETPLACE RIDECLUB"
+          title={selectedCompany ? `Motos ${filter}.` : "Todas las motos, directamente."}
         >
-          <span className="count-label">
-            {bikes.length} modelos / {brands.length} empresas
-          </span>
-        </SectionHead>
-        <div className="catalog-toolbar">
-          <div className="brand-tabs" aria-label="Filtrar por marca">
-            {(["Todas", ...brands] as const).map((b) => (
-              <button
-                key={b}
-                className={filter === b ? "active" : ""}
-                onClick={() => setFilter(b)}
-              >
-                {b}
-                {filter === b && <span />}
-              </button>
-            ))}
+          <div className="marketplace-head-actions">
+            <span className="count-label">
+              {visible.length} modelos / {brands.length} empresas
+            </span>
+            <button className="button secondary small" onClick={onRewards}>
+              Ver recompensas <Gift size={15} />
+            </button>
           </div>
+        </SectionHead>
+        <div className="marketplace-brand-selector" aria-label="Filtrar por empresa">
+          <button
+            className={filter === "Todas" ? "active" : ""}
+            onClick={() => setFilter("Todas")}
+          >
+            <span className="all-brands-mark">R</span>
+            <span>
+              <strong>Todas las motos</strong>
+              <small>{bikes.length} modelos disponibles</small>
+            </span>
+          </button>
+          {brands.map((brand) => (
+            <button
+              key={brand}
+              className={filter === brand ? "active" : ""}
+              style={{ "--brand-accent": brandInfo[brand].color } as CSSProperties}
+              onClick={() => setFilter(brand)}
+            >
+              <BrandLogo brand={brand} />
+              <span>
+                <strong>{brand}</strong>
+                <small>{brandInfo[brand].subtitle}</small>
+              </span>
+            </button>
+          ))}
+        </div>
+        <div className="catalog-toolbar">
+          <p className="marketplace-result-label">
+            {selectedCompany
+              ? `Catálogo de ${filter} · ${selectedCompany.subtitle}`
+              : "Catálogo de todas las empresas autorizadas"}
+          </p>
           <label className="search-field">
             <Search size={18} />
             <input
@@ -388,21 +293,6 @@ export default function Marketplace({
             />
           </label>
         </div>
-        {selectedCompany && (
-          <div
-            className="brand-focus-banner"
-            style={{ "--brand-accent": selectedCompany.color } as CSSProperties}
-          >
-            <div>
-              <span className="eyebrow">CATÁLOGO OFICIAL DE MARCA</span>
-              <h2>{selectedCompany.subtitle}</h2>
-              <p>
-                Estás explorando exclusivamente motos, puntos y experiencias de {filter}.
-              </p>
-            </div>
-            <BrandLogo brand={filter} />
-          </div>
-        )}
         <div className="filter-row">
           <div className="filter-select">
             <SlidersHorizontal size={16} />

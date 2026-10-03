@@ -66,7 +66,8 @@ type Tab =
   | "coupons"
   | "wallets"
   | "activity";
-type Mutation = (change: (s: Demo) => Demo) => string | null;
+type SaveResult = Promise<string | null>;
+type Mutation = (change: (s: Demo) => Demo) => SaveResult;
 type Editor =
   | { kind: "company"; item?: Company }
   | { kind: "client"; item?: Account }
@@ -129,8 +130,8 @@ export default function Dashboard({
     : undefined;
   const matches = (value: string) =>
     value.toLowerCase().includes(search.toLowerCase());
-  function mutate(fn: (s: Demo) => Demo) {
-    const error = onMutation(fn);
+  async function mutate(fn: (s: Demo) => Demo) {
+    const error = await onMutation(fn);
     if (!error) {
       setEditor(undefined);
       setMessage(
@@ -139,8 +140,8 @@ export default function Dashboard({
     }
     return error;
   }
-  function changePermissions(company: Company, status: Company["status"]) {
-    const error = mutate((s) =>
+  async function changePermissions(company: Company, status: Company["status"]) {
+    const error = await mutate((s) =>
       saveCompany(
         s,
         { ...company, status, walletAddress: company.wallet.address },
@@ -149,8 +150,8 @@ export default function Dashboard({
     );
     if (error) setMessage(error);
   }
-  function restore(type: "bike" | "reward", itemId: string) {
-    const error = mutate((s) => archiveItem(s, type, itemId, false));
+  async function restore(type: "bike" | "reward", itemId: string) {
+    const error = await mutate((s) => archiveItem(s, type, itemId, false));
     if (error) setMessage(error);
   }
   function exportCSV() {
@@ -368,7 +369,7 @@ export default function Dashboard({
           <div className="business-session">
             <span>{current.email}</span>
             <small>
-              {global ? "Rol administrador" : "Rol empresa"} · demo local
+              {global ? "Rol administrador" : "Rol empresa"} · entorno de prueba
             </small>
             <button onClick={onLogout}>
               <LogOut size={16} /> Cerrar sesión
@@ -468,7 +469,7 @@ export default function Dashboard({
               </button>
             )}
             <span className="dashboard-demo-label">
-              Datos locales de este perfil · USDT ficticio
+              Datos del ámbito autorizado · USDT ficticio
             </span>
           </div>
           {!global && own?.status !== "active" && (
@@ -1708,7 +1709,7 @@ function ClientEditor({
   item?: Account;
   companies: Company[];
   onClose: () => void;
-  onSave: (draft: ClientDraft) => string | null;
+  onSave: (draft: ClientDraft) => SaveResult;
 }) {
   const [form, setForm] = useState<ClientDraft>({
     name: item?.name ?? "",
@@ -1718,9 +1719,9 @@ function ClientEditor({
     status: item?.status ?? "active",
   });
   const [error, setError] = useState("");
-  function submit(event: FormEvent) {
+  async function submit(event: FormEvent) {
     event.preventDefault();
-    const result = onSave(form);
+    const result = await onSave(form);
     if (result) setError(result);
   }
   return (
@@ -1792,13 +1793,13 @@ function PointRulesEditor({
 }: {
   company: Company;
   onClose: () => void;
-  onSave: (rules: PointRuleSet) => string | null;
+  onSave: (rules: PointRuleSet) => SaveResult;
 }) {
   const [rules, setRules] = useState<PointRuleSet>(structuredClone(company.pointRules));
   const [error, setError] = useState("");
-  function submit(event: FormEvent) {
+  async function submit(event: FormEvent) {
     event.preventDefault();
-    const result = onSave(rules);
+    const result = await onSave(rules);
     if (result) setError(result);
   }
   return (
@@ -1855,7 +1856,7 @@ function CompanyEditor({
 }: {
   company?: Company;
   onClose: () => void;
-  onSave: (d: CompanyDraft) => string | null;
+  onSave: (d: CompanyDraft) => SaveResult;
 }) {
   const [form, setForm] = useState<CompanyDraft>({
     name: company?.name ?? "",
@@ -1871,9 +1872,9 @@ function CompanyEditor({
   function field<K extends keyof CompanyDraft>(key: K, value: CompanyDraft[K]) {
     setForm({ ...form, [key]: value });
   }
-  function submit(e: FormEvent) {
+  async function submit(e: FormEvent) {
     e.preventDefault();
-    const err = onSave(form);
+    const err = await onSave(form);
     if (err) setError(err);
   }
   return (
@@ -1953,10 +1954,9 @@ function CompanyEditor({
           onChange={(v) => field("logo", v)}
         />
         <p className="fine-print">
-          El correo abrirá el dashboard de esta empresa en la demo. Al
-          publicarla, aparecerá en la landing y en el registro de clientes. La
-          verificación del correo y los permisos reales se conectarán al
-          backend.
+          El correo permite solicitar el enlace de acceso al dashboard. Al
+          publicar la empresa, aparecerá en la landing y en el registro de
+          clientes; al suspenderla, se revoca su acceso operativo.
         </p>
         {error && (
           <p className="form-error" role="alert">
@@ -2011,7 +2011,7 @@ function BikeEditor({
   companies: Company[];
   initialCompany?: string;
   onClose: () => void;
-  onSave: (id: string, d: BikeDraft) => string | null;
+  onSave: (id: string, d: BikeDraft) => SaveResult;
 }) {
   const [companyId, setCompanyId] = useState(
     companies.find((c) => c.name === (item?.brand ?? initialCompany))?.id ??
@@ -2036,7 +2036,7 @@ function BikeEditor({
   function field<K extends keyof BikeDraft>(key: K, value: BikeDraft[K]) {
     setForm({ ...form, [key]: value });
   }
-  function submit(e: FormEvent) {
+  async function submit(e: FormEvent) {
     e.preventDefault();
     const lines = specs
       .split("\n")
@@ -2050,7 +2050,7 @@ function BikeEditor({
       const i = l.indexOf(":");
       return [l.slice(0, i).trim(), l.slice(i + 1).trim()] as [string, string];
     });
-    const err = onSave(companyId, { ...form, specs: pairs });
+    const err = await onSave(companyId, { ...form, specs: pairs });
     if (err) setError(err);
   }
   return (
@@ -2181,7 +2181,7 @@ function RewardEditor({
   companies: Company[];
   initialCompany?: string;
   onClose: () => void;
-  onSave: (id: string, d: RewardDraft) => string | null;
+  onSave: (id: string, d: RewardDraft) => SaveResult;
 }) {
   const [companyId, setCompanyId] = useState(
     companies.find((c) => c.name === (item?.brand ?? initialCompany))?.id ??
@@ -2203,9 +2203,9 @@ function RewardEditor({
   function field<K extends keyof RewardDraft>(key: K, value: RewardDraft[K]) {
     setForm({ ...form, [key]: value });
   }
-  function submit(e: FormEvent) {
+  async function submit(e: FormEvent) {
     e.preventDefault();
-    const err = onSave(companyId, form);
+    const err = await onSave(companyId, form);
     if (err) setError(err);
   }
   return (
@@ -2333,7 +2333,7 @@ function WalletEditor({
 }: {
   company: Company;
   onClose: () => void;
-  onSave: (s: string) => string | null;
+  onSave: (s: string) => SaveResult;
 }) {
   const [address, setAddress] = useState(company.wallet.address ?? "");
   const [error, setError] = useState("");
@@ -2341,9 +2341,9 @@ function WalletEditor({
     <Modal title={`Dirección de cobro · ${company.name}`} onClose={onClose}>
       <form
         className="stack-form dashboard-editor"
-        onSubmit={(e) => {
+        onSubmit={async (e) => {
           e.preventDefault();
-          const err = onSave(address);
+          const err = await onSave(address);
           if (err) setError(err);
         }}
       >
@@ -2362,7 +2362,7 @@ function WalletEditor({
         </label>
         <p className="fine-print">
           Esta configuración no crea una wallet ni verifica su titularidad. Los
-          pagos y el saldo real se conectarán al backend y a blockchain.
+          pagos y el saldo real se conectarán en la etapa de blockchain.
         </p>
         {error && (
           <p className="form-error" role="alert">
@@ -2384,7 +2384,7 @@ function DeleteDialog({
 }: {
   label: string;
   onClose: () => void;
-  onSave: () => string | null;
+  onSave: () => SaveResult;
 }) {
   const [error, setError] = useState("");
   return (
@@ -2402,8 +2402,8 @@ function DeleteDialog({
       )}
       <button
         className="button dark full"
-        onClick={() => {
-          const err = onSave();
+        onClick={async () => {
+          const err = await onSave();
           if (err) setError(err);
         }}
       >

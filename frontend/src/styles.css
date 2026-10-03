@@ -4420,6 +4420,33 @@ main {
 .card-brand-signature .brand-logo { width: 72px; height: 24px; }
 .brand-context-page .brand-tabs button.active { padding-inline: 13px; border-radius: 4px 4px 0 0; background: color-mix(in srgb, var(--brand-accent) 24%, white); }
 
+/* Marketplace directo: catálogo y marcas visibles desde el primer scroll */
+.marketplace-direct-catalog { margin-top: clamp(34px, 5vw, 68px); }
+.marketplace-head-actions { display: flex; align-items: center; gap: 14px; }
+.marketplace-brand-selector { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 22px; }
+.marketplace-brand-selector > button { position: relative; display: flex; align-items: center; min-height: 78px; gap: 13px; overflow: hidden; padding: 14px 16px; border: 1px solid #dfe5d9; border-radius: 9px; text-align: left; background: linear-gradient(135deg, color-mix(in srgb, var(--brand-accent, #c6f46a) 10%, white), #fff 72%); }
+.marketplace-brand-selector > button:before { content: ""; position: absolute; inset: 0 auto 0 0; width: 4px; background: var(--brand-accent, #c6f46a); opacity: .5; }
+.marketplace-brand-selector > button:hover,
+.marketplace-brand-selector > button.active { border-color: color-mix(in srgb, var(--brand-accent, #6c9637) 65%, #dfe5d9); box-shadow: 0 10px 25px color-mix(in srgb, var(--brand-accent, #6c9637) 16%, transparent); transform: translateY(-1px); }
+.marketplace-brand-selector > button.active:before { width: 7px; opacity: 1; }
+.marketplace-brand-selector .brand-logo { flex: 0 0 auto; width: 78px; height: 30px; object-position: center; }
+.marketplace-brand-selector .brand-logo.niu { width: 58px; }
+.marketplace-brand-selector > button > span { min-width: 0; }
+.marketplace-brand-selector strong,
+.marketplace-brand-selector small { display: block; }
+.marketplace-brand-selector strong { margin-bottom: 4px; color: #283424; font-size: 11px; }
+.marketplace-brand-selector small { overflow: hidden; color: #788374; font-size: 8px; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
+.all-brands-mark { display: grid !important; flex: 0 0 auto; place-items: center; width: 39px; height: 39px; border-radius: 50%; color: #172019; background: #c6f46a; font-size: 20px; font-weight: 900; }
+.marketplace-result-label { margin: 0; color: #687564; font-size: 10px; }
+.bike-company-identity { display: flex; align-items: center; gap: 14px; min-height: 67px; padding: 11px 17px; border-bottom: 1px solid color-mix(in srgb, var(--brand-accent) 30%, #e5e9e0); background: linear-gradient(105deg, color-mix(in srgb, var(--brand-accent) 23%, white), #fff 76%); }
+.bike-company-identity .brand-logo { flex: 0 0 auto; width: 80px; height: 30px; object-position: left center; }
+.bike-company-identity .brand-logo.niu { width: 58px; }
+.bike-company-identity span { min-width: 0; padding-left: 13px; border-left: 1px solid color-mix(in srgb, var(--brand-accent) 36%, #dfe4d9); }
+.bike-company-identity strong,
+.bike-company-identity small { display: block; }
+.bike-company-identity strong { color: #253122; font-size: 10px; }
+.bike-company-identity small { overflow: hidden; margin-top: 3px; color: #71806c; font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
+
 @media (max-width: 1100px) {
   .business-shell { grid-template-columns: 205px minmax(0, 1fr); }
   .business-content { padding: 22px; }
@@ -4429,6 +4456,7 @@ main {
   .landing-hero-visual { min-height: 520px; }
   .landing-how { grid-template-columns: 1fr; }
   .landing-brand-grid { grid-template-columns: 1fr 1fr; }
+  .marketplace-brand-selector { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 820px) {
   .business-shell { display: block; }
@@ -4449,6 +4477,13 @@ main {
 @media (max-width: 600px) {
   .business-content { padding: 15px; }
   .business-heading { display: block; }
+  .marketplace-direct-catalog { margin-top: 28px; }
+  .marketplace-head-actions .count-label { display: none; }
+  .marketplace-head-actions .button { padding-inline: 11px; font-size: 8px; }
+  .marketplace-brand-selector { display: flex; overflow-x: auto; gap: 9px; margin-right: -20px; padding: 2px 20px 9px 0; scroll-snap-type: x proximity; }
+  .marketplace-brand-selector > button { flex: 0 0 210px; min-height: 70px; scroll-snap-align: start; }
+  .marketplace-result-label { display: none; }
+  .bike-company-identity { min-height: 62px; }
   .business-heading .button { margin-top: 13px; }
   .business-filters { align-items: stretch; flex-direction: column; }
   .dashboard-demo-label { margin: 0; padding: 0; }

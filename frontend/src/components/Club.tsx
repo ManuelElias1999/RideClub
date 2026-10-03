@@ -153,8 +153,8 @@ export function CouponDialog({
         )}
         <p className="fine-print">
           El QR identifica el beneficio; no es el NFT. Al confirmar el servicio,
-          se consume una sola vez. La quema del NFT real se conectará al backend
-          y quedará un comprobante en tu historial.
+          se consume una sola vez. La quema del NFT real se conectará en la
+          etapa blockchain y quedará un comprobante en tu historial.
         </p>
       </div>
     </Modal>
@@ -344,8 +344,8 @@ export default function Club({
             </span>
           </div>
           <p className="fine-print">
-            Tu perfil está preparado para crear una wallet con tu correo al
-            conectar el backend.
+            Tu perfil está preparado para crear una wallet con tu correo en la
+            siguiente etapa de integración blockchain.
           </p>
           <span className="demo-badge">Cuenta de demostración</span>
           <div className="profile-affiliation">

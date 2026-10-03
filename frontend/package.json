@@ -10,18 +10,19 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0",
+    "@supabase/supabase-js": "^2.117.2",
     "lucide-react": "^0.468.0",
-    "qrcode": "^1.5.4"
+    "qrcode": "^1.5.4",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
   },
   "devDependencies": {
+    "@types/qrcode": "^1.5.5",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
-    "@types/qrcode": "^1.5.5",
+    "@vitejs/plugin-react": "^5.0.4",
     "typescript": "~5.9.3",
     "vite": "^7.1.9",
-    "@vitejs/plugin-react": "^5.0.4",
     "vitest": "^3.2.4"
   }
 }

@@ -2,9 +2,9 @@
 
 ## Estado de esta entrega
 
-El frontend registra nombre, correo, celular regional, marca y referido opcional. Cada perfil nuevo es `client`; la marca se conserva en el perfil y los clientes anteriores pueden vincularla desde Mi club. Existe una cuenta pública de `admin` para probar acreditaciones, validación de beneficios y exportación. Los datos se guardan localmente. No existe conexión a una base de clientes ni autenticación de producción.
+El frontend registra nombre, correo, celular regional, marca y referido opcional. Cada perfil público nuevo es `client`; la marca se conserva en el perfil y puede actualizarse desde Mi club. Con Supabase configurado, Auth verifica el correo, los roles privilegiados se asignan desde el servidor y PostgreSQL conserva los datos. Todavía no existe conexión con un CRM o base comercial externa.
 
-## Contrato de datos propuesto para el backend
+## Contrato de datos implementado
 
 | Dato                             | Propósito                                                           | Responsable                              |
 | -------------------------------- | ------------------------------------------------------------------- | ---------------------------------------- |
@@ -17,7 +17,7 @@ El frontend registra nombre, correo, celular regional, marca y referido opcional
 | `adminBrandScope`                | Empresas que puede administrar una cuenta                           | Administración de permisos               |
 | `lastSyncedAt`, `sourceVersion`  | Estado y versión de la última sincronización                        | Conector                                 |
 
-Una marca seleccionada por el usuario no acredita por sí sola una relación comercial. Una persona podría ser cliente de varias marcas; el backend podrá mantener una tabla de vínculos por `(userId, brandId)` mientras el frontend actual presenta una marca principal. El catálogo y los puntos siguen admitiendo las tres marcas.
+Una marca seleccionada por el usuario no acredita por sí sola una relación comercial. `profiles.primary_company_id` guarda la empresa principal; compras, movimientos y cupones relacionan al cliente con otras empresas sin mezclar saldos. `company_memberships` reserva las asignaciones operativas de cuentas empresariales.
 
 ## Registro y vinculación
 

@@ -1,12 +1,13 @@
 # Verificación de RideClub
 
-Fecha: 3 de octubre de 2026. Actualización de registro, compras y tarjeta de beneficio.
+Fecha: 3 de octubre de 2026. Actualización de frontend y backend Supabase.
 
 ## Comprobaciones de código
 
 - `npm run build`: TypeScript y compilación Vite completadas.
 - `npm test`: veintidós pruebas Vitest completadas.
 - `git diff --check`: sin errores de espacios.
+- `npx supabase test db`: prueba de esquema disponible en `supabase/tests/database.test.sql`; requiere Docker/Supabase CLI y se ejecuta después de `supabase db reset`.
 
 Las pruebas cubren canje y consumo de un solo uso, saldo por marca, vigencia, consentimiento, cupos, registro y referido, teléfonos regionales, compras con descuento USDT y puntos atómicos, saldo insuficiente, modelos sin precio, reintentos idempotentes, recargas y migración de cuentas anteriores. También validan marcas, actualización del perfil sin pérdida de saldo, roles cliente/administrador/empresa, aislamiento entre empresas, control global del administrador, CRUD empresarial de clientes, inicio de sesión de una cuenta creada y persistida, bloqueo de acceso, sincronización entre mantenimiento y recompensa, reglas de puntos por empresa y vencimiento trazable. Comprueban que no se repone saldo gastado al recargar y que un referido no se premia dos veces, incluso entre marcas o después de una confirmación manual del taller.
 
@@ -32,6 +33,10 @@ Chromium headless con Playwright. Resultado: **PASS**, sin errores de JavaScript
 
 Capturas del frontend ejecutado: [registro con marca](preview-registration.jpg), [escritorio](preview-desktop.jpg), [móvil](preview-mobile.jpg), [club](preview-club.jpg), [club móvil](preview-mobile-club.jpg), [recompensas](preview-rewards.jpg), [compra](preview-checkout.jpg) y [beneficio](preview-benefit.jpg). La foto ilustrativa del mantenimiento se generó con imagegen; las capturas muestran la aplicación real.
 
+## Backend
+
+Con las variables de Supabase configuradas, el registro e ingreso usan correo, los datos son compartidos y la separación de roles se aplica con RLS y funciones transaccionales. El esquema de pruebas comprueba tablas, funciones, RLS y el seed. En este entorno no estaba disponible Docker ni Supabase CLI, por lo que la migración debe ejecutarse localmente con los comandos de [BACKEND.md](BACKEND.md) antes del despliegue.
+
 ## Límites
 
-Es una demo local. No hay autenticación de producción, verificación de celular o correo, creación de wallet, fondos reales, pagos, contratos o transacciones de Base Sepolia. La separación de roles, la autorización del taller y la quema se simulan. La base de clientes existente todavía no está conectada. Disponibilidad comercial de Kiden en Bolivia y aprobación de las recompensas pendientes.
+No hay verificación de celular, creación de wallet, fondos reales, pagos, contratos ni transacciones de Base Sepolia. La autorización criptográfica del taller y la quema on-chain todavía no existen; el consumo de cupón sí se impide en el backend. La base de clientes externa todavía no está conectada. Disponibilidad comercial de Kiden en Bolivia y aprobación de las recompensas pendientes.

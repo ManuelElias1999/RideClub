@@ -37,15 +37,15 @@ npm run dev -- --host 127.0.0.1
 
 - Marketplace de nueve modelos reales: **703F, GK350, GK200**; **NQi Sport MY26, NQiX 300 MY26, NQiX 500 MY26**; **KD150-Z, KD250-V, KD150-GK**.
 - Portada independiente con explicación del producto, funcionamiento, empresas, ofertas destacadas y accesos a las cuatro secciones principales: Inicio, Marketplace, Recompensas y cuenta/dashboard.
-- Fotografías y logos de las marcas, tipografía local, filtros por marca/estilo, búsqueda, orden por precio/nombre y favoritas.
+- Marketplace directo a la cuadrícula de motos, con selector por empresa y logo, lema y color de marca visibles en cada ficha; además incluye filtros por marca/estilo, búsqueda, orden y favoritas.
 - Fichas con características, fuente y precios publicados en USDT cuando existen. Compra simulada con saldo USDT ficticio para Zontes y NIU; Kiden requiere cotización. Las consultas comerciales llevan al sitio de origen; no se procesan pagos reales.
-- Registro local por nombre, correo, **marca vinculada (Zontes / NIU / Kiden)**, **celular con región y prefijo (+591 por defecto)** y **número de referido opcional**; ingreso por correo para cuentas del mismo navegador.
+- Registro por nombre, correo, **marca vinculada**, **celular con región y prefijo (+591 por defecto)** y **número de referido opcional**. Con Supabase configurado, el ingreso usa un enlace seguro enviado al correo; sin variables conserva el modo local de presentación.
 - Cada cuenta recibe un **número único de ocho dígitos** y un enlace de invitación. El enlace precarga el código al registrarse.
 - Perfil con wallet **pendiente de creación** y configuración preparada para Base Sepolia. No se genera una wallet ficticia ni se guardan claves.
 - “Mi club”: saldo USDT de prueba, puntos separados por marca, compras con comprobante, beneficios disponibles/usados/vencidos, favoritas, referidos y actividad.
 - Nueve **recompensas propuestas**: mantenimiento o diagnóstico eléctrico, descuento en repuestos/accesorios y limpieza/revisión visual.
-- Canje local por tarjeta visual de beneficio con foto de mantenimiento, estado, vigencia y QR desplegable. El beneficio se valida una sola vez; se conserva en el historial sin descontar puntos nuevamente.
-- Roles de demo **cliente / empresa / administrador**: el registro crea clientes; cada empresa opera su marca y el administrador global supervisa la plataforma.
+- Canje transaccional por tarjeta visual de beneficio con estado, vigencia y QR desplegable. El beneficio se valida una sola vez y se conserva en el historial sin descontar puntos nuevamente.
+- Roles **cliente / empresa / administrador** protegidos por políticas RLS: el registro crea clientes; cada empresa opera su ámbito y el administrador global supervisa la plataforma.
 - **Administración global de RideClub**: métricas por empresa, clientes, compras, ventas USDT demo, motos vendidas, puntos canjeados, beneficios usados, wallets y exportación CSV por período.
 - Alta y gestión de empresas con correo asignado, estado pendiente/publicado/suspendido, identidad visual y permisos. Solo las empresas publicadas aparecen en la landing y pueden recibir registros.
 - **Dashboard independiente para cada empresa**: acceso con su correo (por ejemplo `zontes@gmail.com`), métricas y clientes limitados a su marca, gestión de motos, recompensas, precios, cupos, wallet y validación en taller.
@@ -60,7 +60,7 @@ npm run dev -- --host 127.0.0.1
 
 ## Recorrido de demo
 
-1. Pulsa **Iniciar sesión** e ingresa con tu correo de demo en este navegador, o elige **Entrar a la demo de Manuel**.
+1. En modo local, pulsa **Iniciar sesión** y usa la demo de Manuel. Con Supabase, solicita el enlace de acceso que llegará a tu correo.
 2. En **Mi club**, tienes **20.000 USDT de prueba**. Las cuentas existentes reciben este saldo una vez al actualizar, conservando sus puntos, referidos y beneficios. También puedes usar **Recargar 20.000 USDT demo**.
 3. En **Marketplace**, abre **Zontes 703F → Comprar con USDT de prueba → Confirmar compra de prueba**.
 4. El saldo queda en **8.510 USDT**, recibes **1.000 puntos Zontes** adicionales y se guarda un comprobante en **Mi club → Mis compras**. Recargar la página conserva los cambios.
@@ -82,25 +82,23 @@ La opción **Sobre la demo y sus fuentes → Reiniciar datos de esta demo** rest
 
 ### Probar administración y empresas
 
-1. Pulsa **Iniciar sesión → Entrar como administrador demo** para abrir la administración global.
+1. En modo local, usa **Entrar como administrador demo**. Con Supabase, entra con el administrador inicial creado mediante `bootstrap-admin`.
 2. En **Empresas**, registra una empresa y selecciona **Publicada** para que aparezca en la landing y en el registro de clientes; **Suspendida** retira su catálogo y bloquea la edición de la empresa.
 3. Consulta métricas globales o filtra una empresa. Las secciones muestran clientes, compras, motos, canjes, wallets y actividad; los reportes se pueden exportar en CSV.
 4. Cierra sesión e ingresa con `zontes@gmail.com`, `niu@gmail.com` o `kiden@gmail.com`. Cada correo abre únicamente el dashboard y los datos de esa empresa.
 5. Desde el dashboard empresarial se pueden registrar, editar, bloquear o dar de baja clientes; agregar, editar o retirar motos y recompensas; configurar puntos ganados, costos de canje, precios, cupos y una dirección EVM de demo. Los cambios publicados se reflejan en la landing.
 
-Los roles y datos siguen siendo locales en esta etapa. No existe contraseña ni sincronización real entre navegadores hasta implementar el backend. Una ventana normal y una ventana de incógnito usan almacenamientos diferentes, por lo que las cuentas deben probarse en el mismo perfil del navegador donde fueron creadas.
+Con Supabase configurado, roles y datos se comparten entre navegadores y se validan en el servidor. Sin variables de Supabase, el proyecto conserva deliberadamente el modo local para presentar la interfaz.
 
 ## Estado de backend y blockchain
 
-**Esta etapa es frontend.** No incluye backend, verificación de correo, autenticación segura, contratos, pagos, wallets, tokens ni NFTs reales. El saldo USDT ficticio, las compras, los puntos y cupones se guardan en `localStorage` del navegador actual; no se comparten entre dispositivos.
+El backend Supabase incluye autenticación por correo, PostgreSQL, seguridad RLS, roles, persistencia, operaciones transaccionales, Edge Functions y auditoría. Consulta [instalación, despliegue y pruebas](docs/BACKEND.md).
 
-El taller requiere una cuenta con rol de empresa dentro de la demo. La autorización real se hará en el servidor. Su casilla de autorización no sustituye una verificación de titularidad; el QR solo identifica el cupón local.
-
-La siguiente etapa integrará **EVM en Base Sepolia (chain ID 84532)**: registro por correo con creación automática de wallet, puntos tokenizados y cupones ERC-721 que se consumen y queman con autorización del cliente y del taller. Se prevé descontar puntos y emitir el NFT en una sola transacción. Los cupones usados conservarán su historial.
+Todavía no incluye contratos, fondos reales, creación de wallets, tokens ni NFTs. El saldo USDT sigue siendo ficticio. La siguiente etapa integrará **EVM en Base Sepolia (chain ID 84532)**; el QR actual identifica el cupón, pero no sustituye una firma del titular.
 
 ## Clientes existentes y roles
 
-La autenticación real y la sincronización con la base de clientes existente se integrarán en el backend. La elección de marca en la demo guarda la asociación del perfil, pero no verifica que exista un registro comercial en esa empresa. Los administradores se asignarán desde el servidor; el cliente no podrá elegir ese rol al registrarse.
+El alta manual, la autenticación y los roles ya se gestionan en el backend. La integración con CRM o bases comerciales externas permanece como trabajo posterior. Los administradores y empresas solo se asignan desde operaciones privilegiadas; un registro público siempre crea un cliente.
 
 [Plan de integración con clientes existentes](docs/CUSTOMER_INTEGRATION.md): identidad verificada, asociación por marca, identificación del cliente externo, permisos y sincronización sin duplicar movimientos.
 
@@ -121,7 +119,9 @@ frontend/
   src/lib/business.ts  Permisos, métricas y gestión de empresas/catálogos
   src/lib/phone.ts     Regiones, prefijos y validación del celular
   src/lib/demo.test.ts Pruebas del flujo de demo
+  src/lib/supabase/    Cliente y adaptador del backend
   src/App.tsx          Navegación, composición y persistencia
   src/styles.css       Diseño responsive
+supabase/              Migraciones, RLS, RPC, Edge Functions, seed y tests
 docs/                  Arquitectura, fuentes, capturas y verificación
 ```

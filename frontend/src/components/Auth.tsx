@@ -21,6 +21,8 @@ export default function Auth({
   onAdminDemo,
   created,
   error,
+  notice,
+  backendMode = false,
   initialMode = "register",
 }: {
   onClose: () => void;
@@ -30,12 +32,14 @@ export default function Auth({
     phone: PhoneInput,
     code: string,
     brand: Brand,
-  ) => void;
-  onLogin: (email: string) => void;
+  ) => void | Promise<void>;
+  onLogin: (email: string) => void | Promise<void>;
   onDemo: () => void;
   onAdminDemo: () => void;
   created?: Account;
   error: string;
+  notice?: string;
+  backendMode?: boolean;
   initialMode?: "register" | "login";
 }) {
   const { brands, companies } = useCatalog();
@@ -49,11 +53,23 @@ export default function Auth({
   const [code, setCode] = useState(
     () => new URLSearchParams(window.location.search).get("ref") ?? "",
   );
-  function submit(e: FormEvent) {
+  const [busy, setBusy] = useState(false);
+  async function submit(e: FormEvent) {
     e.preventDefault();
-    if (login) onLogin(email);
-    else
-      onRegister(name, email, { region, number: phone }, code, brand as Brand);
+    setBusy(true);
+    try {
+      if (login) await onLogin(email);
+      else
+        await onRegister(
+          name,
+          email,
+          { region, number: phone },
+          code,
+          brand as Brand,
+        );
+    } finally {
+      setBusy(false);
+    }
   }
   return (
     <Modal
@@ -239,7 +255,7 @@ export default function Auth({
                 <label className="checkbox-field">
                   <input type="checkbox" required />
                   <span>
-                    Entiendo que estoy creando una cuenta de demostración local.
+                    Entiendo que estoy creando una cuenta de demostración.
                   </span>
                 </label>
               </>
@@ -249,21 +265,38 @@ export default function Auth({
                 {error}
               </p>
             )}
-            <button className="button primary full" type="submit">
-              {login ? "Entrar a mi club" : "Crear mi cuenta"}
+            {notice && (
+              <p className="proposal-note" role="status">
+                <Check size={18} /> {notice}
+              </p>
+            )}
+            <button className="button primary full" type="submit" disabled={busy}>
+              {busy
+                ? "Enviando enlace…"
+                : login
+                  ? backendMode
+                    ? "Enviar enlace de acceso"
+                    : "Entrar a mi club"
+                  : backendMode
+                    ? "Crear y verificar mi cuenta"
+                    : "Crear mi cuenta"}
               <ArrowRight size={18} />
             </button>
           </form>
-          <div className="auth-demo">
-            <span>¿Solo quieres explorar?</span>
-            <button onClick={onDemo}>
-              <LogIn size={16} /> Entrar a la demo de Manuel
-            </button>
-          </div>
-          <button className="admin-demo-login" onClick={onAdminDemo}>
-            <ShieldCheck size={16} /> Entrar como administrador demo
-          </button>
-          {login && (
+          {!backendMode && (
+            <>
+              <div className="auth-demo">
+                <span>¿Solo quieres explorar?</span>
+                <button onClick={onDemo}>
+                  <LogIn size={16} /> Entrar a la demo de Manuel
+                </button>
+              </div>
+              <button className="admin-demo-login" onClick={onAdminDemo}>
+                <ShieldCheck size={16} /> Entrar como administrador demo
+              </button>
+            </>
+          )}
+          {!backendMode && login && (
             <div className="company-demo-emails">
               <strong>Accesos de empresas · demo</strong>
               {companies.map((c) => (
@@ -281,10 +314,9 @@ export default function Auth({
           <div className="auth-footnote">
             <ShieldCheck size={16} />
             <span>
-              Frontend de demo: los datos existen solo en este perfil del
-              navegador. Una ventana normal y una ventana de incógnito no
-              comparten cuentas. No verifica el correo ni crea una sesión
-              segura.
+              {backendMode
+                ? "Te enviaremos un enlace seguro al correo. Las cuentas bloqueadas o dadas de baja no pueden acceder a datos privados ni operar en RideClub."
+                : "Frontend de demo: los datos existen solo en este perfil del navegador. Una ventana normal y una ventana de incógnito no comparten cuentas. No verifica el correo ni crea una sesión segura."}
             </span>
           </div>
         </>
