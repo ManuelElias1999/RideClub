@@ -8,12 +8,8 @@ import {
   Download,
   Wrench,
 } from "lucide-react";
-import {
-  brands,
-  pointsRules,
-  type Brand,
-  type ActivityKind,
-} from "../data/catalog";
+import { pointsRules, type Brand, type ActivityKind } from "../data/catalog";
+import { useCatalog } from "../data/CatalogContext";
 import type { Demo } from "../lib/demo";
 import { date, fmt, SectionHead } from "./ui";
 export default function Workshop({
@@ -22,6 +18,7 @@ export default function Workshop({
   onCredit,
   onUse,
   onExport,
+  companyBrand,
 }: {
   state: Demo;
   couponCode: string;
@@ -39,10 +36,15 @@ export default function Workshop({
     workshop: string,
   ) => boolean;
   onExport: () => void;
+  companyBrand?: Brand;
 }) {
+  const { allCompanies } = useCatalog();
+  const brands = companyBrand
+    ? [companyBrand]
+    : allCompanies.map((c) => c.name);
   const clients = state.accounts.filter((a) => a.role === "client");
   const [client, setClient] = useState(clients[0]?.id ?? "");
-  const [brand, setBrand] = useState<Brand>("Zontes");
+  const [brand, setBrand] = useState<Brand>(companyBrand ?? "Zontes");
   const [kind, setKind] = useState<ActivityKind>("Compra");
   const [ref, setRef] = useState("");
   const [confirmed, setConfirmed] = useState(false);

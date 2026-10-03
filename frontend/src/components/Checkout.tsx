@@ -49,7 +49,7 @@ export default function Checkout({
         <dl className="checkout-summary">
           <div>
             <dt>{purchase ? "Total descontado" : "Precio de prueba"}</dt>
-            <dd>{fmt(bike.price!)} USDT</dd>
+            <dd>{fmt(purchase?.amountUSDT ?? bike.price!)} USDT</dd>
           </div>
           <div>
             <dt>
@@ -78,7 +78,7 @@ export default function Checkout({
             <div>
               <dt>Nuevo saldo de puntos</dt>
               <dd>
-                {fmt(account.points[bike.brand])} {bike.brand}
+                {fmt(account.points[bike.brand] ?? 0)} {bike.brand}
               </dd>
             </div>
           )}

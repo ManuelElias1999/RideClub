@@ -1,5 +1,6 @@
 import { ArrowRight, Coins, Clock, Ticket, ArrowUpRight } from "lucide-react";
-import { brands, rewards, type Brand, type Reward } from "../data/catalog";
+import { type Brand, type Reward } from "../data/catalog";
+import { useCatalog } from "../data/CatalogContext";
 import type { Account, Coupon } from "../lib/demo";
 import { BrandLogo, fmt, Modal, RewardIcon, SectionHead } from "./ui";
 export default function Rewards({
@@ -17,6 +18,7 @@ export default function Rewards({
   onSelect: (r: Reward) => void;
   onJoin: () => void;
 }) {
+  const { brands, rewards } = useCatalog();
   return (
     <section className="page-section">
       <div className="page-intro">
@@ -37,7 +39,7 @@ export default function Rewards({
           <Coins size={23} />
           <span>
             {account
-              ? `Tienes ${fmt(account.points.Zontes + account.points.NIU + account.points.Kiden)} puntos en tu club`
+              ? `Tienes ${fmt(Object.values(account.points).reduce((sum, p) => sum + p, 0))} puntos en tu club`
               : "Únete al club y empieza a sumar puntos"}
             <small>Los puntos se acumulan y canjean por marca.</small>
           </span>
@@ -91,7 +93,10 @@ export default function Rewards({
                 className={`reward-card ${r.brand.toLowerCase()}`}
                 key={r.id}
               >
-                <div className="reward-art">
+                <div className={`reward-art ${r.image ? "with-photo" : ""}`}>
+                  {r.image && (
+                    <img className="reward-cover" src={r.image} alt={r.title} />
+                  )}
                   <span className="reward-icon">
                     <RewardIcon kind={r.kind} size={46} />
                   </span>

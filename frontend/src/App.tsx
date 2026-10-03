@@ -8,11 +8,10 @@ import {
   UserRound,
   X,
   Wrench,
+  ShieldCheck,
   Bike as BikeIcon,
 } from "lucide-react";
 import {
-  brandInfo,
-  brands,
   type Bike,
   type Brand,
   type Reward,
@@ -21,7 +20,6 @@ import {
 import {
   linkBrand,
   enterAdminDemo,
-  adminAction,
   buy,
   fundDemo,
   id,
@@ -38,6 +36,9 @@ import {
   type Coupon,
   type Demo,
 } from "./lib/demo";
+import { CatalogProvider } from "./data/CatalogContext";
+import { manageBrand, readBusiness } from "./lib/business";
+import Dashboard from "./components/Dashboard";
 import Marketplace, { BikeDetail } from "./components/Marketplace";
 import Rewards, { RewardDetail } from "./components/Rewards";
 import Club, { CouponDialog } from "./components/Club";
@@ -45,10 +46,11 @@ import Checkout from "./components/Checkout";
 import Auth from "./components/Auth";
 import Workshop from "./components/Workshop";
 import { BrandLogo, Modal } from "./components/ui";
-type Page = "marketplace" | "recompensas" | "club" | "taller";
+type Page =
+  "marketplace" | "recompensas" | "club" | "taller" | "admin" | "empresa";
 const getPage = (): Page => {
   const h = window.location.hash.slice(1);
-  return ["recompensas", "club", "taller"].includes(h)
+  return ["recompensas", "club", "taller", "admin", "empresa"].includes(h)
     ? (h as Page)
     : "marketplace";
 };
@@ -76,6 +78,10 @@ export default function App() {
   const [workshopCode, setWorkshopCode] = useState("");
   const [toast, setToast] = useState("");
   const [info, setInfo] = useState(false);
+  const brands = state.companies
+    .filter((c) => c.status === "active")
+    .map((c) => c.name);
+  const brandInfo = Object.fromEntries(state.companies.map((c) => [c.name, c]));
   const account = state.accounts.find((a) => a.id === state.currentId);
   const commit = (next: Demo) => {
     stateRef.current = next;
@@ -123,6 +129,46 @@ export default function App() {
       window.scrollTo({ top: 0, behavior: "instant" });
     document.title = `RideClub — ${page === "marketplace" ? "Tu próxima ruta empieza aquí" : page === "club" ? "Mi club" : page === "taller" ? "Taller demo" : "Recompensas"}`;
   }, [page]);
+  const staff = account?.role === "admin" || account?.role === "company";
+  const dashboardPage: Page = account?.role === "company" ? "empresa" : "admin";
+  const dashboardProps = {
+    state,
+    onMutation: (fn: (s: Demo) => Demo): string | null => {
+      try {
+        commit(fn(stateRef.current));
+        return null;
+      } catch (e) {
+        return (e as Error).message;
+      }
+    },
+    onLogout: () => {
+      commit({ ...stateRef.current, currentId: null });
+      navigate("marketplace");
+    },
+    onWorkshop: () => navigate("taller"),
+  };
+  const workshopState =
+    account?.role === "company"
+      ? (() => {
+          const view = readBusiness(state);
+          return {
+            ...state,
+            accounts: state.accounts.filter(
+              (a) =>
+                a.id === account.id || view.clients.some((c) => c.id === a.id),
+            ),
+            companies: view.companies,
+            purchases: view.purchases,
+            coupons: view.coupons,
+            activities: view.activities,
+            catalogBikes: view.bikes,
+            catalogRewards: view.rewards,
+          };
+        })()
+      : state;
+  useEffect(() => {
+    if (filter !== "Todas" && !brands.includes(filter)) setFilter("Todas");
+  }, [state.companies, filter]);
   function navigate(p: Page) {
     setPage(p);
     window.location.hash = p === "marketplace" ? "marketplace" : p;
@@ -166,12 +212,16 @@ export default function App() {
   }
   function exportCSV() {
     if (
-      stateRef.current.accounts.find((a) => a.id === stateRef.current.currentId)
-        ?.role !== "admin"
+      !["admin", "company"].includes(
+        stateRef.current.accounts.find(
+          (a) => a.id === stateRef.current.currentId,
+        )?.role ?? "",
+      )
     ) {
       setToast("Esta operación requiere el rol de administrador de demo.");
       return;
     }
+    const view = readBusiness(stateRef.current);
     const cell = (v: string | number) =>
       `"${String(v)
         .replace(/^[=+@-]/, "'$&")
@@ -186,8 +236,8 @@ export default function App() {
         "Fecha",
         "Referencia",
       ],
-      ...state.activities.map((a) => {
-        const user = state.accounts.find((x) => x.id === a.accountId);
+      ...view.activities.map((a) => {
+        const user = view.clients.find((x) => x.id === a.accountId);
         return [
           user?.name ?? "",
           user?.email ?? "",
@@ -237,7 +287,7 @@ export default function App() {
     navigate("recompensas");
   };
   return (
-    <>
+    <CatalogProvider state={state}>
       <a className="skip-link" href="#main">
         Ir al contenido
       </a>
@@ -266,7 +316,14 @@ export default function App() {
           {[
             ["marketplace", "Marketplace"],
             ["recompensas", "Recompensas"],
-            ["club", "Mi club"],
+            ...(!staff
+              ? [["club", "Mi club"]]
+              : [
+                  [
+                    dashboardPage,
+                    account?.role === "admin" ? "Administración" : "Mi empresa",
+                  ],
+                ]),
           ].map(([p, label]) => (
             <button
               key={p}
@@ -287,7 +344,11 @@ export default function App() {
         <div className="header-actions">
           <button
             className="account-button"
-            onClick={account ? () => navigate("club") : () => openAuth("login")}
+            onClick={
+              account
+                ? () => navigate(staff ? dashboardPage : "club")
+                : () => openAuth("login")
+            }
           >
             <UserRound size={18} />
             <span>
@@ -321,13 +382,16 @@ export default function App() {
           <Rewards
             filter={filter}
             setFilter={setFilter}
-            account={account}
+            account={account?.role === "client" ? account : undefined}
             coupons={state.coupons}
             onSelect={openReward}
             onJoin={openAuth}
           />
         )}
-        {page === "club" && (
+        {page === "club" && staff && (
+          <Dashboard key={account.id} {...dashboardProps} />
+        )}
+        {page === "club" && !staff && (
           <Club
             account={account}
             state={state}
@@ -352,17 +416,83 @@ export default function App() {
             }}
           />
         )}
+        {(page === "admin" || page === "empresa") &&
+          ((page === "admin" && account?.role === "admin") ||
+          (page === "empresa" && account?.role === "company") ? (
+            <Dashboard key={account.id} {...dashboardProps} />
+          ) : (
+            <section className="page-section admin-access">
+              <ShieldCheck size={35} />
+              <span className="eyebrow">
+                {page === "admin"
+                  ? "ADMINISTRACIÓN GLOBAL"
+                  : "ACCESO DE EMPRESAS"}
+              </span>
+              <h1>
+                {page === "admin"
+                  ? "El club, en tus manos."
+                  : "Tu empresa, en un solo lugar."}
+              </h1>
+              <p>
+                {page === "admin"
+                  ? "Este panel requiere el rol de administrador de RideClub."
+                  : "Ingresa con el correo que el administrador asignó a tu empresa para consultar su dashboard."}
+              </p>
+              {account?.role === "company" ? (
+                <button
+                  className="button primary"
+                  onClick={() => navigate("empresa")}
+                >
+                  Volver a mi empresa
+                </button>
+              ) : page === "admin" ? (
+                <button
+                  className="button primary"
+                  onClick={() => {
+                    commit(enterAdminDemo(stateRef.current));
+                    navigate("admin");
+                  }}
+                >
+                  Entrar como administrador demo
+                </button>
+              ) : (
+                <button
+                  className="button primary"
+                  onClick={() => openAuth("login")}
+                >
+                  Iniciar sesión de empresa
+                </button>
+              )}
+            </section>
+          ))}
         {page === "taller" &&
-          (account?.role === "admin" ? (
+          (staff ? (
             <Workshop
               key={workshopCode}
-              state={state}
+              state={workshopState}
+              companyBrand={
+                account?.role === "company" ? account.brand : undefined
+              }
               couponCode={workshopCode}
               onCredit={(a, b, k, r, c) =>
-                apply((s) => adminAction(s, (s) => credit(s, a, b, k, r, c)))
+                apply((s) => {
+                  manageBrand(s, b);
+                  if (
+                    s.accounts.find((x) => x.id === s.currentId)?.role ===
+                      "company" &&
+                    !readBusiness(s).clients.some((x) => x.id === a)
+                  )
+                    throw Error(
+                      "Este cliente no pertenece al ámbito de tu empresa.",
+                    );
+                  return credit(s, a, b, k, r, c);
+                })
               }
               onUse={(id, b, c, w) =>
-                apply((s) => adminAction(s, (s) => useCoupon(s, id, b, c, w)))
+                apply((s) => {
+                  manageBrand(s, b);
+                  return useCoupon(s, id, b, c, w);
+                })
               }
               onExport={exportCSV}
             />
@@ -410,7 +540,7 @@ export default function App() {
             {brands.map((b) => (
               <a
                 key={b}
-                href={brandInfo[b].url}
+                href={brandInfo[b].url || "#catalogo"}
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label={`Sitio ${b}`}
@@ -455,7 +585,7 @@ export default function App() {
           onClose={() => setBike(undefined)}
           onBuy={(b) => {
             setBike(undefined);
-            if (!account) {
+            if (!account || account.role !== "client") {
               openAuth("login");
               return;
             }
@@ -539,9 +669,19 @@ export default function App() {
           }}
           onLogin={(e) => {
             try {
-              commit(login(stateRef.current, e));
+              const next = login(stateRef.current, e);
+              commit(next);
               setAuth(false);
-              navigate("club");
+              const role = next.accounts.find(
+                (a) => a.id === next.currentId,
+              )?.role;
+              navigate(
+                role === "company"
+                  ? "empresa"
+                  : role === "admin"
+                    ? "admin"
+                    : "club",
+              );
             } catch (e) {
               setAuthError((e as Error).message);
             }
@@ -549,7 +689,7 @@ export default function App() {
           onAdminDemo={() => {
             commit(enterAdminDemo(stateRef.current));
             setAuth(false);
-            navigate("taller");
+            navigate("admin");
           }}
           onDemo={() => {
             commit({ ...stateRef.current, currentId: "demo-rider" });
@@ -644,6 +784,6 @@ export default function App() {
           </button>
         </Modal>
       )}
-    </>
+    </CatalogProvider>
   );
 }

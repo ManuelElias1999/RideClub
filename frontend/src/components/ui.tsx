@@ -1,6 +1,7 @@
 import { useEffect, useRef, type ReactNode } from "react";
 import { X, ArrowUpRight, Wrench, Package, Sparkles } from "lucide-react";
-import { brandInfo, type Brand, type Reward } from "../data/catalog";
+import { type Brand, type Reward } from "../data/catalog";
+import { useCatalog } from "../data/CatalogContext";
 export const fmt = (n: number) => new Intl.NumberFormat("es-BO").format(n);
 export const date = (s: string) =>
   new Intl.DateTimeFormat("es-BO", {
@@ -15,12 +16,25 @@ export function BrandLogo({
   brand: Brand;
   className?: string;
 }) {
-  return (
+  const { brandInfo } = useCatalog();
+  const company = brandInfo[brand];
+  return company?.logo ? (
     <img
-      className={`brand-logo ${brand.toLowerCase()} ${className}`}
-      src={brandInfo[brand].logo}
+      className={`brand-logo ${brand.toLowerCase().replace(/[^a-z0-9-]/g, "")} ${className}`}
+      src={company.logo}
       alt={brand}
+      onError={(e) => {
+        e.currentTarget.style.display = "none";
+      }}
     />
+  ) : (
+    <span
+      className={`brand-logo brand-initials ${className}`}
+      aria-label={brand}
+    >
+      {brand.slice(0, 2).toUpperCase()}
+      <small>{brand}</small>
+    </span>
   );
 }
 export function SectionHead({

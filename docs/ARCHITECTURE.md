@@ -13,12 +13,17 @@ React 19 + TypeScript + Vite. Interfaz responsive con CSS propio, Lucide y QRCod
 - `src/components/Auth.tsx`: creación de perfil por correo, celular regional y código opcional, marca vinculada obligatoria, ingreso de demo y resultado del registro.
 - `src/components/Club.tsx`: perfil, wallet pendiente, saldo USDT ficticio, puntos por marca, compras, tarjeta visual de beneficio, QR, actividad y referidos.
 - `src/components/Workshop.tsx`: acreditar actividades confirmadas, validar cupones y exportar actividad.
+- `src/components/Dashboard.tsx`: administración global y workspace empresarial con métricas, filtros, exportaciones, clientes, compras, catálogos, canjes y wallets.
+- `src/data/CatalogContext.tsx`: catálogo dinámico derivado de empresas autorizadas y elementos publicados.
+- `src/lib/business.ts`: control de alcance por rol, consultas agregadas, auditoría y operaciones de empresas, motos, recompensas y wallets.
 - `src/components/ui.tsx`: diálogos nativos, logos y componentes comunes.
 - `src/App.tsx`: composición, navegación por hash, persistencia y operaciones del usuario.
 
 ## Estado y límites
 
-El estado se guarda en `localStorage` (`rideclub-demo-v1`). No es compartido entre dispositivos ni navegadores. El correo se normaliza y no puede duplicarse dentro de la demo. No existe autenticación real ni verificación de correo. El panel de taller exige el rol administrador de demo. `adminAction` comprueba el rol de la cuenta actual antes de acreditar actividades o consumir cupones. Esta separación local de vistas y acciones no es autorización segura; el acceso de administrador demo es público.
+El estado se guarda en `localStorage` (`rideclub-demo-v1`). No es compartido entre dispositivos ni navegadores. El correo se normaliza y no puede duplicarse dentro de la demo. No existe autenticación real ni verificación de correo. Los roles locales son `client`, `company` y `admin`. El administrador consulta toda la plataforma; una empresa solo puede consultar y modificar recursos vinculados a su `companyId`; el cliente no puede ejecutar operaciones administrativas. Esta separación local de vistas y acciones no es autorización segura y deberá repetirse en cada endpoint del backend.
+
+El administrador registra empresas con correo, estado e identidad visual. `active` las publica en landing y registro; `pending` las mantiene fuera del catálogo; `suspended` además bloquea sus escrituras. El primer ingreso con el correo asignado crea una sesión empresarial local. El catálogo dinámico admite nuevas marcas sin modificar las vistas, y la auditoría registra cambios administrativos. Las eliminaciones de motos y recompensas son archivados recuperables para no romper el historial.
 
 Un perfil nuevo empieza con cero puntos. La cuenta de Manuel tiene 1.000 puntos Zontes para el recorrido de demo. Cada perfil recibe un número aleatorio de ocho dígitos que no se repite dentro del estado local y un enlace `?ref=NUMERO#club`. El formulario admite código opcional y precarga el del enlace. Solo acepta códigos existentes en este navegador. Registrar un referido no acredita puntos: su primera compra de prueba premia automáticamente a quien lo invitó una sola vez. La confirmación manual de referido en taller comparte la protección contra duplicados, incluso entre marcas.
 

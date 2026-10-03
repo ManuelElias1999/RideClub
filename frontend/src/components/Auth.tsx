@@ -8,9 +8,10 @@ import {
   Wallet,
   LogIn,
 } from "lucide-react";
-import { brands, type Brand } from "../data/catalog";
+import { type Brand } from "../data/catalog";
 import { phoneRegions, type PhoneInput } from "../lib/phone";
 import type { Account } from "../lib/demo";
+import { useCatalog } from "../data/CatalogContext";
 import { Modal } from "./ui";
 export default function Auth({
   onClose,
@@ -37,6 +38,7 @@ export default function Auth({
   error: string;
   initialMode?: "register" | "login";
 }) {
+  const { brands, companies } = useCatalog();
   const [login, setLogin] = useState(initialMode === "login");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -117,7 +119,7 @@ export default function Auth({
           </div>
           <p className="auth-description">
             {login
-              ? "Ingresa con el correo de una cuenta creada en este navegador."
+              ? "Ingresa con tu correo de cliente o el correo de acceso de tu empresa."
               : "Un correo, un club y muchas razones para seguir rodando."}
           </p>
           <form onSubmit={submit} className="stack-form">
@@ -168,8 +170,8 @@ export default function Auth({
                     ))}
                   </select>
                   <small>
-                    Vincula tu perfil con Zontes, NIU o Kiden. Puedes explorar y
-                    comprar en las tres marcas.
+                    Elige una empresa del club. Puedes explorar y comprar en
+                    todas las empresas aprobadas.
                   </small>
                 </label>
                 <label>
@@ -261,6 +263,21 @@ export default function Auth({
           <button className="admin-demo-login" onClick={onAdminDemo}>
             <ShieldCheck size={16} /> Entrar como administrador demo
           </button>
+          {login && (
+            <div className="company-demo-emails">
+              <strong>Accesos de empresas · demo</strong>
+              {companies.map((c) => (
+                <button
+                  key={c.id}
+                  onClick={() => {
+                    setEmail(c.email);
+                  }}
+                >
+                  {c.email}
+                </button>
+              ))}
+            </div>
+          )}
           <div className="auth-footnote">
             <ShieldCheck size={16} />
             <span>

@@ -78,7 +78,11 @@ describe("RideClub demo lifecycle", () => {
   });
   it("does not issue a coupon after the last demo slot is taken", () => {
     const one = { ...maintenance, stock: 1 };
-    const { state } = redeem(initialDemo(), "demo-rider", one);
+    const demo = initialDemo();
+    demo.catalogRewards = demo.catalogRewards.map((reward) =>
+      reward.id === one.id ? one : reward,
+    );
+    const { state } = redeem(demo, "demo-rider", one);
     expect(() => redeem(state, "demo-rider", one)).toThrow("agotó");
     expect(state.coupons).toHaveLength(1);
   });

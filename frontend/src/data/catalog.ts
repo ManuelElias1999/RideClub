@@ -1,5 +1,5 @@
 export const brands = ["Zontes", "NIU", "Kiden"] as const;
-export type Brand = (typeof brands)[number];
+export type Brand = string;
 export type Bike = {
   id: string;
   brand: Brand;
@@ -12,6 +12,7 @@ export type Bike = {
   source: string;
   region: string;
   specs: [string, string][];
+  archived?: boolean;
 };
 export const brandInfo: Record<
   Brand,
@@ -218,6 +219,8 @@ export type Reward = {
   terms: string;
   days: number;
   stock: number;
+  image?: string;
+  archived?: boolean;
 };
 export const rewards: Reward[] = brands.flatMap((brand) => [
   {

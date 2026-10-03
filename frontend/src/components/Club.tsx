@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useCatalog } from "../data/CatalogContext";
 import QRCode from "qrcode";
 import {
   ArrowRight,
@@ -15,7 +16,7 @@ import {
   Heart,
   Wrench,
 } from "lucide-react";
-import { bikes, brands, rewards, type Bike, type Brand } from "../data/catalog";
+import { type Bike, type Brand } from "../data/catalog";
 import type { Account, Activity, Coupon, Demo } from "../lib/demo";
 import { BikeCard } from "./Marketplace";
 import { BrandLogo, date, fmt, Modal, SectionHead } from "./ui";
@@ -28,6 +29,7 @@ export function CouponDialog({
   onClose: () => void;
   onWorkshop: (coupon: Coupon) => void;
 }) {
+  const { allRewards: rewards } = useCatalog();
   const [showQR, setShowQR] = useState(false);
   const [qr, setQr] = useState("");
   const [failed, setFailed] = useState(false);
@@ -55,8 +57,8 @@ export function CouponDialog({
       <div className="coupon-dialog">
         <div className={`nft-art ${coupon.usedAt ? "consumed" : ""}`}>
           <img
-            src="/assets/maintenance-benefit.webp"
-            alt="Mecánico realizando mantenimiento a una moto"
+            src={coupon.image ?? "/assets/maintenance-benefit.webp"}
+            alt={coupon.title}
           />
           <div>
             <span>RIDECLUB / BENEFICIO NFT · DEMO</span>
@@ -139,7 +141,7 @@ export function CouponDialog({
             </>
           )}
         </dl>
-        <p className="fine-print">{reward?.terms}</p>
+        <p className="fine-print">{coupon.terms ?? reward?.terms}</p>
         {!coupon.usedAt && !expired && (
           <button
             className="button dark full"
@@ -185,6 +187,7 @@ export default function Club({
   onFund: () => void;
   onLinkBrand: (b: Brand) => void;
 }) {
+  const { brands, bikes, allBikes, allCompanies } = useCatalog();
   const [tab, setTab] = useState("benefits");
   const [used, setUsed] = useState(false);
   if (!account)
@@ -266,22 +269,22 @@ export default function Club({
             <Coins size={22} />
           </div>
           <strong className="points-total">
-            {fmt(
-              account.points.Zontes + account.points.NIU + account.points.Kiden,
-            )}
+            {fmt(Object.values(account.points).reduce((sum, p) => sum + p, 0))}
             <small>puntos</small>
           </strong>
           <p>Tu próxima recompensa está más cerca.</p>
           <div className="brand-balances">
-            {brands.map((b) => (
-              <button key={b} onClick={() => onBrand(b)}>
-                <BrandLogo brand={b} />
-                <strong>
-                  {fmt(account.points[b])}
-                  <ArrowUpRight size={14} />
-                </strong>
-              </button>
-            ))}
+            {allCompanies
+              .map((c) => c.name)
+              .map((b) => (
+                <button key={b} onClick={() => onBrand(b)}>
+                  <BrandLogo brand={b} />
+                  <strong>
+                    {fmt(account.points[b])}
+                    <ArrowUpRight size={14} />
+                  </strong>
+                </button>
+              ))}
           </div>
           <button className="button primary full" onClick={onRewards}>
             Explorar recompensas
@@ -356,6 +359,11 @@ export default function Club({
                 <option value="" disabled>
                   Selecciona tu marca
                 </option>
+                {account.brand && !brands.includes(account.brand) && (
+                  <option value={account.brand} disabled>
+                    {account.brand} · sin publicación
+                  </option>
+                )}
                 {brands.map((b) => (
                   <option key={b}>{b}</option>
                 ))}
@@ -436,8 +444,8 @@ export default function Club({
                 </div>
                 <img
                   className="benefit-thumbnail"
-                  src="/assets/maintenance-benefit.webp"
-                  alt="Mantenimiento de moto"
+                  src={c.image ?? "/assets/maintenance-benefit.webp"}
+                  alt={c.title}
                 />
                 <h3>{c.title}</h3>
                 <p>
@@ -481,7 +489,7 @@ export default function Club({
               .map((p) => (
                 <article className="purchase-row" key={p.id}>
                   <img
-                    src={bikes.find((b) => b.id === p.bikeId)?.image}
+                    src={allBikes.find((b) => b.id === p.bikeId)?.image}
                     alt={`${p.brand} ${p.model}`}
                   />
                   <div>

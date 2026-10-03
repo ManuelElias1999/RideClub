@@ -45,6 +45,9 @@ npm run dev -- --host 127.0.0.1
 - Nueve **recompensas propuestas**: mantenimiento o diagnóstico eléctrico, descuento en repuestos/accesorios y limpieza/revisión visual.
 - Canje local por tarjeta visual de beneficio con foto de mantenimiento, estado, vigencia y QR desplegable. El beneficio se valida una sola vez; se conserva en el historial sin descontar puntos nuevamente.
 - Roles de demo **cliente / administrador**: el registro crea clientes; el acceso **Entrar como administrador demo** permite acreditar actividades, validar cupones y exportar CSV.
+- **Administración global de RideClub**: métricas por empresa, clientes, compras, ventas USDT demo, motos vendidas, puntos canjeados, beneficios usados, wallets y exportación CSV por período.
+- Alta y gestión de empresas con correo asignado, estado pendiente/publicado/suspendido, identidad visual y permisos. Solo las empresas publicadas aparecen en la landing y pueden recibir registros.
+- **Dashboard independiente para cada empresa**: acceso con su correo (por ejemplo `zontes@gmail.com`), métricas y clientes limitados a su marca, gestión de motos, recompensas, precios, cupos, wallet y validación en taller.
 - Marca visible y editable en Mi club. Las cuentas anteriores conservan su marca; si no tenían una, pueden vincularla desde el perfil sin perder saldos ni compras.
 - Prevención de duplicados de referencias por marca y de recompensas repetidas al mismo referido.
 - Diseño responsive, diálogos nativos, navegación por teclado y reducción de movimiento.
@@ -71,6 +74,16 @@ Una compra de prueba es una transición local, sin pagos ni reserva comercial. E
 
 La opción **Sobre la demo y sus fuentes → Reiniciar datos de esta demo** restablece los datos locales.
 
+### Probar administración y empresas
+
+1. Pulsa **Iniciar sesión → Entrar como administrador demo** para abrir la administración global.
+2. En **Empresas**, registra una empresa y selecciona **Publicada** para que aparezca en la landing y en el registro de clientes; **Suspendida** retira su catálogo y bloquea la edición de la empresa.
+3. Consulta métricas globales o filtra una empresa. Las secciones muestran clientes, compras, motos, canjes, wallets y actividad; los reportes se pueden exportar en CSV.
+4. Cierra sesión e ingresa con `zontes@gmail.com`, `niu@gmail.com` o `kiden@gmail.com`. Cada correo abre únicamente el dashboard y los datos de esa empresa.
+5. Desde el dashboard empresarial se pueden agregar, editar o retirar motos y recompensas, configurar precios, cupos y una dirección EVM de demo. Los cambios publicados se reflejan en la landing.
+
+Los roles y datos siguen siendo locales en esta etapa. No existe contraseña ni sincronización real entre navegadores hasta implementar el backend.
+
 ## Estado de backend y blockchain
 
 **Esta etapa es frontend.** No incluye backend, verificación de correo, autenticación segura, contratos, pagos, wallets, tokens ni NFTs reales. El saldo USDT ficticio, las compras, los puntos y cupones se guardan en `localStorage` del navegador actual; no se comparten entre dispositivos.
@@ -96,9 +109,10 @@ Consulta de fuentes: 3 de octubre de 2026. Ver [modelos, fuentes y recursos visu
 ```text
 frontend/
   public/assets/       Fotos, logos y tipografía locales
-  src/components/      Marketplace, recompensas, registro, club y taller
+  src/components/      Marketplace, registro, club, taller y dashboards
   src/data/catalog.ts  Modelos, fuentes, beneficios y reglas propuestas
   src/lib/demo.ts      Cuentas, compras, USDT demo, referidos y cupones
+  src/lib/business.ts  Permisos, métricas y gestión de empresas/catálogos
   src/lib/phone.ts     Regiones, prefijos y validación del celular
   src/lib/demo.test.ts Pruebas del flujo de demo
   src/App.tsx          Navegación, composición y persistencia

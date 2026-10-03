@@ -12,13 +12,8 @@ import {
   Users,
   Gift,
 } from "lucide-react";
-import {
-  bikes,
-  brands,
-  brandInfo,
-  type Brand,
-  type Bike,
-} from "../data/catalog";
+import { type Brand, type Bike } from "../data/catalog";
+import { useCatalog } from "../data/CatalogContext";
 import { BrandLogo, ExternalLink, fmt, Modal, SectionHead } from "./ui";
 export function BikeCard({
   bike,
@@ -79,7 +74,7 @@ export function BikeCard({
                 <strong>
                   {fmt(bike.price)} <small>USDT</small>
                 </strong>
-                <span>Precio publicado · Bolivia</span>
+                <span>Precio de catálogo</span>
               </>
             ) : (
               <>
@@ -156,9 +151,11 @@ export function BikeDetail({
               Comprar con USDT de prueba <ArrowRight size={17} />
             </button>
           )}
-          <ExternalLink href={bike.source}>
-            Consultar modelo en la tienda
-          </ExternalLink>
+          {bike.source && (
+            <ExternalLink href={bike.source}>
+              Consultar modelo en la tienda
+            </ExternalLink>
+          )}
           <button
             className="button secondary full"
             onClick={() => onReward(bike.brand)}
@@ -188,6 +185,8 @@ export default function Marketplace({
   onRewards: () => void;
   onJoin: () => void;
 }) {
+  const { bikes, brands, brandInfo } = useCatalog();
+  const featured = bikes.find((b) => b.id === "z703f") ?? bikes[0];
   const [search, setSearch] = useState("");
   const [style, setStyle] = useState("Todos");
   const [sort, setSort] = useState("featured");
@@ -236,32 +235,41 @@ export default function Marketplace({
           </div>
           <div className="hero-bottom">
             <div>
-              <strong>03</strong>
+              <strong>{String(brands.length).padStart(2, "0")}</strong>
               <span>marcas. Un solo club.</span>
             </div>
             <div className="mini-brand-list">
-              <BrandLogo brand="Zontes" />
-              <BrandLogo brand="NIU" />
-              <BrandLogo brand="Kiden" />
+              {brands.slice(0, 4).map((b) => (
+                <BrandLogo key={b} brand={b} />
+              ))}
             </div>
           </div>
         </div>
         <div className="hero-visual">
           <span className="hero-watermark" aria-hidden="true">
-            703F
+            {featured?.name ?? "RIDE"}
           </span>
           <span className="hero-product-label">
-            <span>ZONTES</span> ADVENTURE / 2026
+            <span>{featured?.brand ?? "RIDECLUB"}</span>{" "}
+            {featured?.category ?? "TU PRÓXIMA RUTA"}
           </span>
           <img
             className="hero-bike"
-            src="/assets/zontes-703f.jpg"
-            alt="Zontes 703F adventure"
+            src={featured?.image ?? "/assets/motorcycle-placeholder.svg"}
+            alt={
+              featured
+                ? `${featured.brand} ${featured.name}`
+                : "Moto ilustrativa"
+            }
           />
           <div className="hero-model">
             <span>Para ir más allá.</span>
-            <button onClick={() => onBike(bikes[0])}>
-              Conoce la 703F <ArrowUpRight size={17} />
+            <button
+              disabled={!featured}
+              onClick={() => featured && onBike(featured)}
+            >
+              Conoce {featured?.name ?? "el catálogo"}{" "}
+              <ArrowUpRight size={17} />
             </button>
           </div>
           <button className="hero-reward" onClick={onJoin}>
@@ -282,7 +290,7 @@ export default function Marketplace({
       </section>
       <section className="brand-strip">
         <span>
-          TRES FORMAS DE MOVERTE.
+          MÁS FORMAS DE MOVERTE.
           <br />
           <strong>UNA MISMA PASIÓN.</strong>
         </span>
@@ -307,7 +315,9 @@ export default function Marketplace({
           eyebrow="ENCUENTRA TU PRÓXIMA MOTO"
           title="Elige cómo quieres rodar."
         >
-          <span className="count-label">09 modelos / 03 marcas</span>
+          <span className="count-label">
+            {bikes.length} modelos / {brands.length} empresas
+          </span>
         </SectionHead>
         <div className="catalog-toolbar">
           <div className="brand-tabs" aria-label="Filtrar por marca">
@@ -342,7 +352,7 @@ export default function Marketplace({
                 value={style}
                 onChange={(e) => setStyle(e.target.value)}
               >
-                {["Todos", "Adventure", "Scrambler", "Naked", "Eléctrica"].map(
+                {["Todos", ...new Set(bikes.map((b) => b.category))].map(
                   (x) => (
                     <option key={x}>{x}</option>
                   ),

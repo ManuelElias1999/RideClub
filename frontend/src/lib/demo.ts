@@ -1,5 +1,7 @@
 import {
   bikes,
+  rewards,
+  brandInfo,
   brands,
   pointsRules,
   type Brand,
@@ -13,7 +15,9 @@ export type Account = {
   name: string;
   email: string;
   brand?: Brand;
-  role: "client" | "admin";
+  role: "client" | "admin" | "company";
+  companyId?: string;
+  createdAt?: string;
   phone?: string;
   balanceUSDT: number;
   code: string;
@@ -33,6 +37,8 @@ export type Coupon = {
   expiresAt: string;
   usedAt?: string;
   workshop?: string;
+  terms?: string;
+  image?: string;
 };
 export type Activity = {
   id: string;
@@ -55,6 +61,29 @@ export type Purchase = {
   createdAt: string;
   operationId: string;
 };
+export type Company = {
+  id: string;
+  name: string;
+  email: string;
+  subtitle: string;
+  logo: string;
+  color: string;
+  url: string;
+  status: "pending" | "active" | "suspended";
+  createdAt: string;
+  wallet: { chainId: 84532; address?: string };
+};
+export const initialCompanies = (): Company[] =>
+  brands.map((name) => ({
+    id: name,
+    name,
+    email: `${name.toLowerCase()}@gmail.com`,
+    ...brandInfo[name],
+    url: brandInfo[name].url,
+    status: "active",
+    createdAt: new Date().toISOString(),
+    wallet: { chainId: 84532 },
+  }));
 export type Demo = {
   version: 1;
   accounts: Account[];
@@ -62,6 +91,17 @@ export type Demo = {
   coupons: Coupon[];
   activities: Activity[];
   purchases: Purchase[];
+  companies: Company[];
+  catalogBikes: import("../data/catalog").Bike[];
+  catalogRewards: Reward[];
+  audit: {
+    id: string;
+    actorId: string;
+    companyId: string;
+    action: string;
+    targetId: string;
+    date: string;
+  }[];
 };
 const seed: Account = {
   id: "demo-rider",
@@ -82,6 +122,10 @@ export const initialDemo = (): Demo => ({
   currentId: null,
   coupons: [],
   purchases: [],
+  companies: initialCompanies(),
+  catalogBikes: structuredClone(bikes),
+  catalogRewards: structuredClone(rewards),
+  audit: [],
   activities: [
     {
       id: "seed-points",
@@ -109,10 +153,15 @@ export function register(
   referredBy = referredBy.trim();
   if (name.length < 2 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
     throw Error("Revisa tu nombre y correo.");
-  if (!brands.includes(brand))
+  if (!state.companies.some((c) => c.name === brand && c.status === "active"))
     throw Error("Selecciona la marca vinculada a tu perfil.");
-  if (email === "admin@rideclub.demo")
-    throw Error("Este correo está reservado al administrador de demo.");
+  if (
+    email === "admin@rideclub.demo" ||
+    state.companies.some((c) => c.email === email)
+  )
+    throw Error(
+      "Este correo corresponde a un acceso de administración o empresa. Usa Iniciar sesión.",
+    );
   const normalizedPhone = normalizePhone(phone);
   if (state.accounts.some((a) => a.email === email))
     throw Error(
@@ -134,12 +183,13 @@ export function register(
     email,
     brand,
     role: "client",
+    createdAt: new Date().toISOString(),
     phone: normalizedPhone,
     balanceUSDT: demoFunding,
     code,
     referredBy: referredBy || undefined,
     wallet: { status: "pending", chainId: 84532 },
-    points: { Zontes: 0, NIU: 0, Kiden: 0 },
+    points: Object.fromEntries(state.companies.map((c) => [c.name, 0])),
     favorites: [],
   };
   return {
@@ -149,7 +199,42 @@ export function register(
   };
 }
 export function login(state: Demo, email: string): Demo {
-  const a = state.accounts.find((a) => a.email === email.trim().toLowerCase());
+  email = email.trim().toLowerCase();
+  const company = state.companies.find((c) => c.email === email);
+  if (company) {
+    const existing = state.accounts.find(
+      (a) => a.role === "company" && a.companyId === company.id,
+    );
+    if (existing) return { ...state, currentId: existing.id };
+    let code: string;
+    do {
+      code = String(
+        10000000 + (crypto.getRandomValues(new Uint32Array(1))[0] % 90000000),
+      );
+    } while (state.accounts.some((a) => a.code === code));
+    const account: Account = {
+      id: id(),
+      name: company.name,
+      email,
+      role: "company",
+      companyId: company.id,
+      brand: company.name,
+      createdAt: new Date().toISOString(),
+      balanceUSDT: 0,
+      code,
+      points: Object.fromEntries(state.companies.map((c) => [c.name, 0])),
+      favorites: [],
+      wallet: { status: "pending", chainId: 84532 },
+    };
+    return {
+      ...state,
+      accounts: [...state.accounts, account],
+      currentId: account.id,
+    };
+  }
+  const a = state.accounts.find(
+    (a) => a.email === email && a.role !== "company",
+  );
   if (!a)
     throw Error(
       "No encontramos este correo en el navegador. Crea una cuenta de demo.",
@@ -163,7 +248,19 @@ export function redeem(
   now = new Date(),
 ): { state: Demo; coupon: Coupon } {
   const account = state.accounts.find((a) => a.id === ownerId);
-  if (!account) throw Error("Ingresa a tu club para canjear.");
+  if (!account || account.role !== "client")
+    throw Error("Ingresa como cliente para canjear.");
+  const current = state.catalogRewards.find(
+    (r) => r.id === reward.id && !r.archived,
+  );
+  if (
+    !current ||
+    !state.companies.some(
+      (c) => c.name === current.brand && c.status === "active",
+    )
+  )
+    throw Error("Este beneficio no está disponible.");
+  reward = current;
   if (account.points[reward.brand] < reward.points)
     throw Error(
       `Necesitas ${reward.points - account.points[reward.brand]} puntos ${reward.brand} más.`,
@@ -179,6 +276,8 @@ export function redeem(
     title: reward.title,
     brand: reward.brand,
     points: reward.points,
+    terms: reward.terms,
+    image: reward.image,
     issuedAt: now.toISOString(),
     expiresAt: new Date(now.getTime() + reward.days * 86400000).toISOString(),
   };
@@ -258,7 +357,12 @@ export function credit(
 ): Demo {
   const a = state.accounts.find((a) => a.id === accountId);
   reference = reference.trim().toUpperCase();
-  if (!a || !pointsRules[kind] || !brands.includes(brand))
+  if (
+    !a ||
+    a.role !== "client" ||
+    !pointsRules[kind] ||
+    !state.companies.some((c) => c.name === brand)
+  )
     throw Error("Selecciona un cliente, una marca y una actividad.");
   if (!confirmed || reference.length < 3)
     throw Error(
@@ -313,6 +417,9 @@ export function loadDemo(): Demo {
     const raw = localStorage.getItem(storageKey);
     if (raw) {
       const s = JSON.parse(raw);
+      const companies: Company[] = Array.isArray(s.companies)
+        ? s.companies
+        : initialCompanies();
       if (
         s.version === 1 &&
         Array.isArray(s.accounts) &&
@@ -323,28 +430,49 @@ export function loadDemo(): Demo {
             a.id &&
             a.wallet &&
             a.points &&
-            brands.every(
-              (b) => Number.isFinite(a.points[b]) && a.points[b] >= 0,
+            Object.values(a.points).every(
+              (p) => Number.isFinite(p) && p >= 0,
             ) &&
             Array.isArray(a.favorites) &&
             (a.balanceUSDT === undefined ||
               (Number.isFinite(a.balanceUSDT) && a.balanceUSDT >= 0)),
         )
-      )
+      ) {
         return {
           ...s,
+          companies,
           accounts: s.accounts.map((a: Account) => ({
             ...a,
-            brand: brands.includes(a.brand as Brand) ? a.brand : undefined,
-            role: a.role === "admin" ? "admin" : "client",
+            brand: companies.some((c) => c.name === a.brand)
+              ? a.brand
+              : undefined,
+            role:
+              a.role === "admin"
+                ? "admin"
+                : a.role === "company" &&
+                    companies.some((c) => c.id === a.companyId)
+                  ? "company"
+                  : "client",
+            points: {
+              ...Object.fromEntries(companies.map((c) => [c.name, 0])),
+              ...a.points,
+            },
             balanceUSDT:
               a.balanceUSDT === undefined ? demoFunding : a.balanceUSDT,
           })),
           purchases: Array.isArray(s.purchases) ? s.purchases : [],
+          catalogBikes: Array.isArray(s.catalogBikes)
+            ? s.catalogBikes
+            : structuredClone(bikes),
+          audit: Array.isArray(s.audit) ? s.audit : [],
+          catalogRewards: Array.isArray(s.catalogRewards)
+            ? s.catalogRewards
+            : structuredClone(rewards),
         };
+      }
     }
   } catch {
-    /* Corrupt or unavailable storage: start a fresh demo. */
+    /* Keep the demo usable if local storage is unavailable. */
   }
   return initialDemo();
 }
@@ -365,8 +493,14 @@ export function buy(
     return { state, purchase: existing };
   }
   const account = state.accounts.find((a) => a.id === ownerId);
-  const bike = bikes.find((b) => b.id === bikeId);
-  if (!account) throw Error("Inicia sesión para comprar en la demo.");
+  const bike = state.catalogBikes.find((b) => b.id === bikeId && !b.archived);
+  if (!account || account.role !== "client")
+    throw Error("Inicia sesión como cliente para comprar en la demo.");
+  if (
+    bike &&
+    !state.companies.some((c) => c.name === bike.brand && c.status === "active")
+  )
+    throw Error("Esta empresa no tiene permiso de publicación.");
   if (!bike?.price || !operationId.trim())
     throw Error("Este modelo necesita una cotización antes de comprar.");
   if (account.balanceUSDT < bike.price)
@@ -397,7 +531,8 @@ export function buy(
         a.id === ownerId
           ? {
               ...a,
-              balanceUSDT: a.balanceUSDT - bike.price!,
+              balanceUSDT:
+                Math.round((a.balanceUSDT - bike.price!) * 100) / 100,
               points: {
                 ...a.points,
                 [bike.brand]: a.points[bike.brand] + purchase.points,
@@ -461,7 +596,8 @@ export function linkBrand(state: Demo, ownerId: string, brand: Brand): Demo {
     !state.accounts.some((a) => a.id === ownerId)
   )
     throw Error("Inicia sesión para vincular tu marca.");
-  if (!brands.includes(brand)) throw Error("Selecciona una marca válida.");
+  if (!state.companies.some((c) => c.name === brand && c.status === "active"))
+    throw Error("Selecciona una marca activa válida.");
   return {
     ...state,
     accounts: state.accounts.map((a) =>
