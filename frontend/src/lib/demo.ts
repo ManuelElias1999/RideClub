@@ -12,6 +12,8 @@ export type Account = {
   id: string;
   name: string;
   email: string;
+  brand?: Brand;
+  role: "client" | "admin";
   phone?: string;
   balanceUSDT: number;
   code: string;
@@ -65,6 +67,8 @@ const seed: Account = {
   id: "demo-rider",
   name: "Manuel",
   email: "manuel@rideclub.demo",
+  brand: "Zontes",
+  role: "client",
   phone: "+59170000000",
   balanceUSDT: demoFunding,
   code: "10002026",
@@ -98,12 +102,17 @@ export function register(
   email: string,
   phone: PhoneInput,
   referredBy: string,
+  brand: Brand,
 ): Demo {
   name = name.trim();
   email = email.trim().toLowerCase();
   referredBy = referredBy.trim();
   if (name.length < 2 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
     throw Error("Revisa tu nombre y correo.");
+  if (!brands.includes(brand))
+    throw Error("Selecciona la marca vinculada a tu perfil.");
+  if (email === "admin@rideclub.demo")
+    throw Error("Este correo está reservado al administrador de demo.");
   const normalizedPhone = normalizePhone(phone);
   if (state.accounts.some((a) => a.email === email))
     throw Error(
@@ -123,6 +132,8 @@ export function register(
     id: id(),
     name,
     email,
+    brand,
+    role: "client",
     phone: normalizedPhone,
     balanceUSDT: demoFunding,
     code,
@@ -324,6 +335,8 @@ export function loadDemo(): Demo {
           ...s,
           accounts: s.accounts.map((a: Account) => ({
             ...a,
+            brand: brands.includes(a.brand as Brand) ? a.brand : undefined,
+            role: a.role === "admin" ? "admin" : "client",
             balanceUSDT:
               a.balanceUSDT === undefined ? demoFunding : a.balanceUSDT,
           })),
@@ -440,4 +453,51 @@ export function fundDemo(state: Demo, ownerId: string): Demo {
       a.id === ownerId ? { ...a, balanceUSDT: a.balanceUSDT + demoFunding } : a,
     ),
   };
+}
+
+export function linkBrand(state: Demo, ownerId: string, brand: Brand): Demo {
+  if (
+    state.currentId !== ownerId ||
+    !state.accounts.some((a) => a.id === ownerId)
+  )
+    throw Error("Inicia sesión para vincular tu marca.");
+  if (!brands.includes(brand)) throw Error("Selecciona una marca válida.");
+  return {
+    ...state,
+    accounts: state.accounts.map((a) =>
+      a.id === ownerId ? { ...a, brand } : a,
+    ),
+  };
+}
+/** Public demo access only. Replace this with server-side authentication and authorization. */
+export function enterAdminDemo(state: Demo): Demo {
+  const existing = state.accounts.find((a) => a.id === "demo-admin");
+  if (existing) return { ...state, currentId: existing.id };
+  let code: string;
+  do {
+    code = String(
+      10000000 + (crypto.getRandomValues(new Uint32Array(1))[0] % 90000000),
+    );
+  } while (state.accounts.some((a) => a.code === code));
+  const admin: Account = {
+    ...structuredClone(seed),
+    id: "demo-admin",
+    name: "Administrador demo",
+    email: "admin@rideclub.demo",
+    role: "admin",
+    brand: undefined,
+    code,
+    balanceUSDT: 0,
+    points: { Zontes: 0, NIU: 0, Kiden: 0 },
+  };
+  return {
+    ...state,
+    accounts: [...state.accounts, admin],
+    currentId: admin.id,
+  };
+}
+export function adminAction(state: Demo, action: (state: Demo) => Demo): Demo {
+  if (state.accounts.find((a) => a.id === state.currentId)?.role !== "admin")
+    throw Error("Esta operación requiere el rol de administrador de demo.");
+  return action(state);
 }

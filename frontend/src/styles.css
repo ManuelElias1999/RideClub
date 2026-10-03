@@ -4106,3 +4106,71 @@ main {
     grid-row: 7;
   }
 }
+.profile-affiliation {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid #e3e9d9;
+}
+.profile-affiliation label {
+  display: block;
+  font-size: 11px;
+  font-weight: 650;
+}
+.profile-affiliation select {
+  display: block;
+  width: 100%;
+  margin: 7px 0 12px;
+  padding: 10px;
+  border: 1px solid #dce1d7;
+  border-radius: 5px;
+  background: white;
+}
+.profile-affiliation .brand-logo {
+  width: 75px;
+  height: 22px;
+}
+.profile-role {
+  display: inline-block;
+  font-size: 10px;
+  margin-bottom: 10px;
+  color: #526645;
+  background: #eff5e7;
+  border-radius: 4px;
+  padding: 4px 8px;
+}
+.admin-demo-login {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  font-size: 11px;
+  text-decoration: underline;
+  margin: 15px 0;
+}
+.admin-access {
+  padding-block: 40px;
+  max-width: 740px;
+}
+.admin-access > .eyebrow {
+  margin-top: 18px;
+}
+.admin-access h1 {
+  font-size: 45px;
+}
+.admin-access > .fine-print {
+  margin-top: 20px;
+  max-width: 580px;
+}
+@media (max-width: 900px) {
+  .profile-affiliation {
+    grid-column: 2 / -1;
+    grid-row: 6;
+    width: 100%;
+  }
+}
+@media (max-width: 680px) {
+  .profile-affiliation {
+    grid-row: 8;
+  }
+}

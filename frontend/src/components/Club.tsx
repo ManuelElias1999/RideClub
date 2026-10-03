@@ -170,6 +170,7 @@ export default function Club({
   onCopy,
   onBrand,
   onFund,
+  onLinkBrand,
 }: {
   account?: Account;
   state: Demo;
@@ -182,6 +183,7 @@ export default function Club({
   onCopy: (v: string) => void;
   onBrand: (b: Brand) => void;
   onFund: () => void;
+  onLinkBrand: (b: Brand) => void;
 }) {
   const [tab, setTab] = useState("benefits");
   const [used, setUsed] = useState(false);
@@ -340,6 +342,31 @@ export default function Club({
             conectar el backend.
           </p>
           <span className="demo-badge">Cuenta de demostración</span>
+          <div className="profile-affiliation">
+            <span className="profile-role">
+              Rol: {account.role === "admin" ? "Administrador" : "Cliente"}
+            </span>
+            <label>
+              Marca vinculada
+              <select
+                aria-label="Marca vinculada al perfil"
+                value={account.brand ?? ""}
+                onChange={(e) => onLinkBrand(e.target.value as Brand)}
+              >
+                <option value="" disabled>
+                  Selecciona tu marca
+                </option>
+                {brands.map((b) => (
+                  <option key={b}>{b}</option>
+                ))}
+              </select>
+            </label>
+            {account.brand ? (
+              <BrandLogo brand={account.brand} />
+            ) : (
+              <small>Vincula tu perfil para completar tu registro.</small>
+            )}
+          </div>
         </div>
       </div>
       <div className="club-tabs">
@@ -552,7 +579,11 @@ export default function Club({
                 </div>
                 <div>
                   <strong>{a.name}</strong>
-                  <span>Registrado con tu número de referido</span>
+                  <span>
+                    {a.brand
+                      ? `Perfil vinculado a ${a.brand}`
+                      : "Marca pendiente de vincular"}
+                  </span>
                 </div>
                 <span className="status-pill">
                   {state.activities.some(

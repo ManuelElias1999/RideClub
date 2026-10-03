@@ -10,7 +10,7 @@ React 19 + TypeScript + Vite. Interfaz responsive con CSS propio, Lucide y QRCod
 - `src/components/Checkout.tsx`: resumen de compra, saldo antes/después y comprobante de simulación.
 - `src/components/Marketplace.tsx`: catálogo, filtros, búsqueda, orden, favoritas y ficha del modelo.
 - `src/components/Rewards.tsx`: catálogo de propuestas y confirmación de canje.
-- `src/components/Auth.tsx`: creación de perfil por correo, celular regional y código opcional, sin marca preferida, ingreso de demo y resultado del registro.
+- `src/components/Auth.tsx`: creación de perfil por correo, celular regional y código opcional, marca vinculada obligatoria, ingreso de demo y resultado del registro.
 - `src/components/Club.tsx`: perfil, wallet pendiente, saldo USDT ficticio, puntos por marca, compras, tarjeta visual de beneficio, QR, actividad y referidos.
 - `src/components/Workshop.tsx`: acreditar actividades confirmadas, validar cupones y exportar actividad.
 - `src/components/ui.tsx`: diálogos nativos, logos y componentes comunes.
@@ -18,7 +18,7 @@ React 19 + TypeScript + Vite. Interfaz responsive con CSS propio, Lucide y QRCod
 
 ## Estado y límites
 
-El estado se guarda en `localStorage` (`rideclub-demo-v1`). No es compartido entre dispositivos ni navegadores. El correo se normaliza y no puede duplicarse dentro de la demo. No existe autenticación real ni verificación de correo. El panel de taller es una simulación sin control de roles.
+El estado se guarda en `localStorage` (`rideclub-demo-v1`). No es compartido entre dispositivos ni navegadores. El correo se normaliza y no puede duplicarse dentro de la demo. No existe autenticación real ni verificación de correo. El panel de taller exige el rol administrador de demo. `adminAction` comprueba el rol de la cuenta actual antes de acreditar actividades o consumir cupones. Esta separación local de vistas y acciones no es autorización segura; el acceso de administrador demo es público.
 
 Un perfil nuevo empieza con cero puntos. La cuenta de Manuel tiene 1.000 puntos Zontes para el recorrido de demo. Cada perfil recibe un número aleatorio de ocho dígitos que no se repite dentro del estado local y un enlace `?ref=NUMERO#club`. El formulario admite código opcional y precarga el del enlace. Solo acepta códigos existentes en este navegador. Registrar un referido no acredita puntos: su primera compra de prueba premia automáticamente a quien lo invitó una sola vez. La confirmación manual de referido en taller comparte la protección contra duplicados, incluso entre marcas.
 
@@ -28,7 +28,7 @@ El canje comprueba usuario, saldo de la marca y cupos; en una sola transición l
 
 ## Compras y compatibilidad con cuentas anteriores
 
-`balanceUSDT` es saldo ficticio independiente de los puntos y de una wallet. Las cuentas nuevas reciben 20.000 USDT de prueba. `loadDemo` conserva la clave y versión anteriores y agrega ese importe únicamente cuando falta el campo; no repone saldo gastado al recargar. Conserva cuentas, puntos, referidos, favoritas, cupones e historial anteriores. El celular queda opcional para perfiles antiguos y es obligatorio en registros nuevos.
+`balanceUSDT` es saldo ficticio independiente de los puntos y de una wallet. Las cuentas nuevas reciben 20.000 USDT de prueba. `loadDemo` conserva la clave y versión anteriores y agrega ese importe únicamente cuando falta el campo; no repone saldo gastado al recargar. Conserva cuentas, puntos, referidos, favoritas, cupones e historial anteriores. El celular queda opcional para perfiles antiguos y es obligatorio en registros nuevos. La marca también es obligatoria en nuevos registros. Se conserva la marca previamente guardada; las cuentas sin marca pueden elegirla en Mi club, sin cambiar puntos ni saldo USDT. `role` se normaliza a `client` cuando no existía; nuevos registros siempre son clientes. `enterAdminDemo` crea o reutiliza una cuenta pública de administrador de pruebas sin modificar el perfil del cliente.
 
 `buy` consulta el precio del catálogo, comprueba cuenta y saldo, descuenta USDT, agrega 1.000 puntos de la marca, guarda el comprobante y acredita el referido elegible en una transición inmutable. Repetir el mismo `operationId` y modelo devuelve el resultado anterior. No se compran modelos sin precio publicado. `fundDemo` permite añadir 20.000 USDT ficticios desde Mi club.
 
@@ -38,7 +38,7 @@ La tarjeta visual incluye foto ilustrativa, beneficio, marca, número, estado, v
 
 Red prevista: Base Sepolia, chain ID 84532. No hay contratos desplegados en esta entrega.
 
-1. Autenticación por correo con verificación y sesiones seguras; proveedor de wallet embebida que preserve las garantías de custodia acordadas.
+1. [Sincronización con la base de clientes existente y roles](CUSTOMER_INTEGRATION.md). Autenticación por correo con verificación y sesiones seguras; proveedor de wallet embebida que preserve las garantías de custodia acordadas.
 2. API de catálogo, cuentas, actividades, referidos, saldos y cupones; validación de roles y claves de idempotencia de facturas/actividades.
 3. Registro de compras confirmado por la tienda o CRM. La cadena no puede comprobar por sí sola una compra física.
 4. Puntos ERC-20 por marca o contabilidad por marca equivalente; restricciones de transferencia y política de vencimiento por definir con la empresa.

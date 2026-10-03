@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { bikes, rewards } from "../data/catalog";
 import {
+  linkBrand,
+  enterAdminDemo,
+  adminAction,
   buy,
   fundDemo,
   loadDemo,
@@ -86,19 +89,20 @@ describe("RideClub demo lifecycle", () => {
       " ANA@example.com ",
       phone,
       "10002026",
+      "NIU",
     );
     const ana = s.accounts[1];
     expect(ana.email).toBe("ana@example.com");
     expect(ana.code).toMatch(/^\d{8}$/);
     expect(ana.wallet.status).toBe("pending");
     expect(ana.points.NIU).toBe(0);
-    s = register(s, "Luis", "luis@example.com", phone, "");
+    s = register(s, "Luis", "luis@example.com", phone, "", "NIU");
     expect(s.accounts[2].code).not.toBe(ana.code);
-    expect(() => register(s, "Ana", "ana@example.com", phone, "")).toThrow(
-      "ya tiene",
-    );
     expect(() =>
-      register(s, "Eva", "eva@example.com", phone, "99999999"),
+      register(s, "Ana", "ana@example.com", phone, "", "NIU"),
+    ).toThrow("ya tiene");
+    expect(() =>
+      register(s, "Eva", "eva@example.com", phone, "99999999", "NIU"),
     ).toThrow("No encontramos");
     expect(login(s, "ana@example.com").currentId).toBe(ana.id);
   });
@@ -109,6 +113,7 @@ describe("RideClub demo lifecycle", () => {
       "ana@example.com",
       phone,
       "10002026",
+      "NIU",
     );
     const ana = s.accounts[1];
     expect(s.accounts[0].points.NIU).toBe(0);
@@ -123,7 +128,14 @@ describe("RideClub demo lifecycle", () => {
     ).toThrow("ya recibió");
   });
   it("rejects duplicate references per brand even for different customers", () => {
-    const s = register(initialDemo(), "Ana", "ana@example.com", phone, "");
+    const s = register(
+      initialDemo(),
+      "Ana",
+      "ana@example.com",
+      phone,
+      "",
+      "NIU",
+    );
     const credited = credit(
       s,
       s.accounts[1].id,
@@ -144,11 +156,19 @@ describe("RideClub demo lifecycle", () => {
 });
 
 describe("phone, simulated purchases and migration", () => {
-  it("registers a normalized regional phone without a preferred brand", () => {
-    const s = register(initialDemo(), "Ana", "ana@example.com", phone, "");
+  it("registers a normalized phone with a linked brand and client role", () => {
+    const s = register(
+      initialDemo(),
+      "Ana",
+      "ana@example.com",
+      phone,
+      "",
+      "NIU",
+    );
     expect(s.accounts[1].phone).toBe("+59170000000");
     expect(s.accounts[1].balanceUSDT).toBe(20000);
-    expect(s.accounts[1]).not.toHaveProperty("brand");
+    expect(s.accounts[1].brand).toBe("NIU");
+    expect(s.accounts[1].role).toBe("client");
     expect(() =>
       register(
         s,
@@ -156,6 +176,7 @@ describe("phone, simulated purchases and migration", () => {
         "eva@example.com",
         { region: "BO", number: "123" },
         "",
+        "NIU",
       ),
     ).toThrow("celular");
     expect(
@@ -165,6 +186,7 @@ describe("phone, simulated purchases and migration", () => {
         "eva@example.com",
         { region: "US", number: "2025550123" },
         "",
+        "NIU",
       ).accounts[2].phone,
     ).toBe("+12025550123");
   });
@@ -195,6 +217,7 @@ describe("phone, simulated purchases and migration", () => {
       "ana@example.com",
       phone,
       "10002026",
+      "NIU",
     );
     const ana = s.accounts[1];
     const first = buy(s, ana.id, "nnqi", "A").state;
@@ -228,6 +251,59 @@ describe("phone, simulated purchases and migration", () => {
     expect(loadDemo().accounts[0].balanceUSDT).toBe(8510);
     expect(loadDemo().purchases).toEqual(purchased.purchases);
     expect(storageKey).toBe("rideclub-demo-v1");
+    delete (globalThis as { localStorage?: unknown }).localStorage;
+  });
+});
+
+describe("linked profiles and demo roles", () => {
+  it("requires a valid brand and can update a legacy profile without changing its balances", () => {
+    const s = { ...initialDemo(), currentId: "demo-rider" };
+    expect(() =>
+      register(s, "Ana", "ana@example.com", phone, "", "Other" as never),
+    ).toThrow("marca vinculada");
+    const next = linkBrand(s, "demo-rider", "Kiden");
+    expect(next.accounts[0].brand).toBe("Kiden");
+    expect(next.accounts[0].points).toEqual(s.accounts[0].points);
+    expect(next.accounts[0].balanceUSDT).toBe(20000);
+    expect(() =>
+      linkBrand({ ...s, currentId: null }, "demo-rider", "NIU"),
+    ).toThrow("Inicia sesión");
+  });
+  it("keeps client data when switching to admin and rejects admin actions from a client", () => {
+    const s = { ...initialDemo(), currentId: "demo-rider" };
+    expect(() =>
+      adminAction(s, (s) =>
+        credit(s, "demo-rider", "NIU", "Compra", "INV-ROLE", true),
+      ),
+    ).toThrow("administrador");
+    const admin = enterAdminDemo(s);
+    expect(admin.accounts[0]).toEqual(s.accounts[0]);
+    expect(admin.accounts.find((a) => a.id === admin.currentId)?.role).toBe(
+      "admin",
+    );
+    expect(enterAdminDemo(admin).accounts).toHaveLength(2);
+    const credited = adminAction(admin, (s) =>
+      credit(s, "demo-rider", "NIU", "Compra", "INV-ROLE", true),
+    );
+    expect(credited.accounts[0].points.NIU).toBe(1000);
+    expect(login(credited, "manuel@rideclub.demo").currentId).toBe(
+      "demo-rider",
+    );
+  });
+  it("migrates missing role and brand without resetting a profile, and preserves its saved brand", () => {
+    const old = JSON.parse(JSON.stringify(initialDemo()));
+    delete old.accounts[0].role;
+    const storage = { getItem: () => JSON.stringify(old) };
+    Object.defineProperty(globalThis, "localStorage", {
+      configurable: true,
+      value: storage,
+    });
+    expect(loadDemo().accounts[0].role).toBe("client");
+    expect(loadDemo().accounts[0].brand).toBe("Zontes");
+    delete old.accounts[0].brand;
+    expect(loadDemo().accounts[0].brand).toBeUndefined();
+    expect(loadDemo().accounts[0].points.Zontes).toBe(1000);
+    expect(loadDemo().accounts[0].code).toBe("10002026");
     delete (globalThis as { localStorage?: unknown }).localStorage;
   });
 });

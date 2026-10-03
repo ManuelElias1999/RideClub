@@ -8,6 +8,7 @@ import {
   Wallet,
   LogIn,
 } from "lucide-react";
+import { brands, type Brand } from "../data/catalog";
 import { phoneRegions, type PhoneInput } from "../lib/phone";
 import type { Account } from "../lib/demo";
 import { Modal } from "./ui";
@@ -16,6 +17,7 @@ export default function Auth({
   onRegister,
   onLogin,
   onDemo,
+  onAdminDemo,
   created,
   error,
   initialMode = "register",
@@ -26,9 +28,11 @@ export default function Auth({
     email: string,
     phone: PhoneInput,
     code: string,
+    brand: Brand,
   ) => void;
   onLogin: (email: string) => void;
   onDemo: () => void;
+  onAdminDemo: () => void;
   created?: Account;
   error: string;
   initialMode?: "register" | "login";
@@ -36,6 +40,7 @@ export default function Auth({
   const [login, setLogin] = useState(initialMode === "login");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [brand, setBrand] = useState<Brand | "">("");
   const [region, setRegion] = useState("BO");
   const [phone, setPhone] = useState("");
   const country = phoneRegions.find((r) => r.code === region)!;
@@ -45,7 +50,8 @@ export default function Auth({
   function submit(e: FormEvent) {
     e.preventDefault();
     if (login) onLogin(email);
-    else onRegister(name, email, { region, number: phone }, code);
+    else
+      onRegister(name, email, { region, number: phone }, code, brand as Brand);
   }
   return (
     <Modal
@@ -76,6 +82,9 @@ export default function Auth({
             </span>
             <span>
               <Check size={18} /> Celular: {created.phone}
+            </span>
+            <span>
+              <Check size={18} /> Perfil cliente vinculado a {created.brand}
             </span>
             <span>
               <Wallet size={18} /> Wallet preparada para Base Sepolia
@@ -143,6 +152,26 @@ export default function Auth({
             </label>
             {!login && (
               <>
+                <label>
+                  Marca vinculada
+                  <select
+                    aria-label="Marca vinculada"
+                    value={brand}
+                    onChange={(e) => setBrand(e.target.value as Brand)}
+                    required
+                  >
+                    <option value="" disabled>
+                      Selecciona tu marca
+                    </option>
+                    {brands.map((b) => (
+                      <option key={b}>{b}</option>
+                    ))}
+                  </select>
+                  <small>
+                    Vincula tu perfil con Zontes, NIU o Kiden. Puedes explorar y
+                    comprar en las tres marcas.
+                  </small>
+                </label>
                 <label>
                   Región
                   <select
@@ -229,6 +258,9 @@ export default function Auth({
               <LogIn size={16} /> Entrar a la demo de Manuel
             </button>
           </div>
+          <button className="admin-demo-login" onClick={onAdminDemo}>
+            <ShieldCheck size={16} /> Entrar como administrador demo
+          </button>
           <div className="auth-footnote">
             <ShieldCheck size={16} />
             <span>

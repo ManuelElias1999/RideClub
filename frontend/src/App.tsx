@@ -19,6 +19,9 @@ import {
   type ActivityKind,
 } from "./data/catalog";
 import {
+  linkBrand,
+  enterAdminDemo,
+  adminAction,
   buy,
   fundDemo,
   id,
@@ -162,6 +165,13 @@ export default function App() {
     } else setToast(`Copia este dato: ${text}`);
   }
   function exportCSV() {
+    if (
+      stateRef.current.accounts.find((a) => a.id === stateRef.current.currentId)
+        ?.role !== "admin"
+    ) {
+      setToast("Esta operación requiere el rol de administrador de demo.");
+      return;
+    }
     const cell = (v: string | number) =>
       `"${String(v)
         .replace(/^[=+@-]/, "'$&")
@@ -332,22 +342,53 @@ export default function App() {
             onBike={setBike}
             onCopy={copy}
             onBrand={rewardNavigate}
+            onLinkBrand={(b) => {
+              if (apply((s) => linkBrand(s, account!.id, b)))
+                setToast(`Tu perfil está vinculado a ${b}.`);
+            }}
             onFund={() => {
               if (apply((s) => fundDemo(s, account!.id)))
                 setToast("Se añadieron 20.000 USDT de prueba a tu saldo.");
             }}
           />
         )}
-        {page === "taller" && (
-          <Workshop
-            key={workshopCode}
-            state={state}
-            couponCode={workshopCode}
-            onCredit={(a, b, k, r, c) => apply((s) => credit(s, a, b, k, r, c))}
-            onUse={(id, b, c, w) => apply((s) => useCoupon(s, id, b, c, w))}
-            onExport={exportCSV}
-          />
-        )}
+        {page === "taller" &&
+          (account?.role === "admin" ? (
+            <Workshop
+              key={workshopCode}
+              state={state}
+              couponCode={workshopCode}
+              onCredit={(a, b, k, r, c) =>
+                apply((s) => adminAction(s, (s) => credit(s, a, b, k, r, c)))
+              }
+              onUse={(id, b, c, w) =>
+                apply((s) => adminAction(s, (s) => useCoupon(s, id, b, c, w)))
+              }
+              onExport={exportCSV}
+            />
+          ) : (
+            <section className="page-section admin-access">
+              <Wrench size={35} />
+              <span className="eyebrow">ACCESO DE ADMINISTRADOR</span>
+              <h1>Gestiona tu club.</h1>
+              <p>
+                La validación de beneficios y la acreditación de puntos
+                corresponden al administrador.
+              </p>
+              <button
+                className="button primary"
+                onClick={() => commit(enterAdminDemo(stateRef.current))}
+              >
+                Entrar como administrador demo <ChevronRight size={18} />
+              </button>
+              <p className="fine-print">
+                Cambiarás a una cuenta de prueba con rol administrador. Tus
+                datos de cliente se conservan; puedes volver ingresando con tu
+                correo. Los roles son una simulación local, sin autenticación
+                segura.
+              </p>
+            </section>
+          ))}
       </main>
       <footer className="site-footer">
         <div className="footer-top">
@@ -486,9 +527,9 @@ export default function App() {
           }}
           created={created}
           error={authError}
-          onRegister={(n, e, b, c) => {
+          onRegister={(n, e, phone, c, b) => {
             try {
-              const next = register(stateRef.current, n, e, b, c);
+              const next = register(stateRef.current, n, e, phone, c, b);
               commit(next);
               setCreated(next.accounts.find((a) => a.id === next.currentId));
               setAuthError("");
@@ -504,6 +545,11 @@ export default function App() {
             } catch (e) {
               setAuthError((e as Error).message);
             }
+          }}
+          onAdminDemo={() => {
+            commit(enterAdminDemo(stateRef.current));
+            setAuth(false);
+            navigate("taller");
           }}
           onDemo={() => {
             commit({ ...stateRef.current, currentId: "demo-rider" });
@@ -572,11 +618,11 @@ export default function App() {
           </p>
           <h4>Qué puedes probar</h4>
           <p className="fine-print">
-            Registro local por correo y celular, referido de 8 dígitos, compras
-            con USDT de prueba, favoritas, puntos por marca, canje con QR y
-            validación de un solo uso. La demo de Manuel empieza con 1.000
-            puntos Zontes; las cuentas nuevas empiezan con cero puntos y 20.000
-            USDT ficticios para probar compras.
+            Registro local por correo, celular y marca vinculada, referido de 8
+            dígitos, compras con USDT de prueba, favoritas, puntos por marca,
+            canje con QR y validación de un solo uso. La demo de Manuel empieza
+            con 1.000 puntos Zontes; las cuentas nuevas empiezan con cero puntos
+            y 20.000 USDT ficticios para probar compras.
           </p>
           <h4>Siguiente etapa</h4>
           <p className="fine-print">

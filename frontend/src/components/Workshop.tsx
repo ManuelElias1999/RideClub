@@ -40,9 +40,8 @@ export default function Workshop({
   ) => boolean;
   onExport: () => void;
 }) {
-  const [client, setClient] = useState(
-    state.currentId ?? state.accounts[0]?.id ?? "",
-  );
+  const clients = state.accounts.filter((a) => a.role === "client");
+  const [client, setClient] = useState(clients[0]?.id ?? "");
   const [brand, setBrand] = useState<Brand>("Zontes");
   const [kind, setKind] = useState<ActivityKind>("Compra");
   const [ref, setRef] = useState("");
@@ -89,14 +88,14 @@ export default function Workshop({
       <div className="proposal-note">
         <Wrench size={20} />
         <span>
-          <strong>Panel de taller de demostración.</strong> Acceso libre para
-          probar el frontend. Roles, confirmaciones y permisos reales se
+          <strong>Panel de taller de demostración.</strong> Acceso con rol
+          administrador de demo. La autenticación y los permisos reales se
           implementarán en el backend.
         </span>
       </div>
       <div className="metrics">
         {[
-          [Users, state.accounts.length, "Riders en el club"],
+          [Users, clients.length, "Riders en el club"],
           [
             Coins,
             state.accounts.reduce(
@@ -139,8 +138,12 @@ export default function Workshop({
           </div>
           <label>
             Cliente
-            <select aria-label="Cliente" value={client} onChange={(e) => setClient(e.target.value)}>
-              {state.accounts.map((a) => (
+            <select
+              aria-label="Cliente"
+              value={client}
+              onChange={(e) => setClient(e.target.value)}
+            >
+              {clients.map((a) => (
                 <option key={a.id} value={a.id}>
                   {a.name} · {a.email}
                 </option>

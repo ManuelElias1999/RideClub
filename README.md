@@ -6,7 +6,7 @@ Marketplace y club de fidelización para **Zontes, NIU y Kiden**, creado para Ha
 
 ![RideClub en escritorio](docs/preview-desktop.jpg)
 
-[Vista móvil](docs/preview-mobile.jpg) · [Mi club](docs/preview-club.jpg) · [Recompensas](docs/preview-rewards.jpg) · [Compra](docs/preview-checkout.jpg) · [Beneficio](docs/preview-benefit.jpg) · [Club móvil](docs/preview-mobile-club.jpg) · [Verificación](docs/QA.md)
+[Registro con marca](docs/preview-registration.jpg) · [Vista móvil](docs/preview-mobile.jpg) · [Mi club](docs/preview-club.jpg) · [Recompensas](docs/preview-rewards.jpg) · [Compra](docs/preview-checkout.jpg) · [Beneficio](docs/preview-benefit.jpg) · [Club móvil](docs/preview-mobile-club.jpg) · [Verificación](docs/QA.md)
 
 ## Ejecutar
 
@@ -38,13 +38,14 @@ npm run dev -- --host 127.0.0.1
 - Marketplace de nueve modelos reales: **703F, GK350, GK200**; **NQi Sport MY26, NQiX 300 MY26, NQiX 500 MY26**; **KD150-Z, KD250-V, KD150-GK**.
 - Fotografías y logos de las marcas, tipografía local, filtros por marca/estilo, búsqueda, orden por precio/nombre y favoritas.
 - Fichas con características, fuente y precios publicados en USDT cuando existen. Compra simulada con saldo USDT ficticio para Zontes y NIU; Kiden requiere cotización. Las consultas comerciales llevan al sitio de origen; no se procesan pagos reales.
-- Registro local por nombre, correo, **celular con región y prefijo (+591 por defecto)** y **número de referido opcional**; ingreso por correo para cuentas del mismo navegador.
+- Registro local por nombre, correo, **marca vinculada (Zontes / NIU / Kiden)**, **celular con región y prefijo (+591 por defecto)** y **número de referido opcional**; ingreso por correo para cuentas del mismo navegador.
 - Cada cuenta recibe un **número único de ocho dígitos** y un enlace de invitación. El enlace precarga el código al registrarse.
 - Perfil con wallet **pendiente de creación** y configuración preparada para Base Sepolia. No se genera una wallet ficticia ni se guardan claves.
 - “Mi club”: saldo USDT de prueba, puntos separados por marca, compras con comprobante, beneficios disponibles/usados/vencidos, favoritas, referidos y actividad.
 - Nueve **recompensas propuestas**: mantenimiento o diagnóstico eléctrico, descuento en repuestos/accesorios y limpieza/revisión visual.
 - Canje local por tarjeta visual de beneficio con foto de mantenimiento, estado, vigencia y QR desplegable. El beneficio se valida una sola vez; se conserva en el historial sin descontar puntos nuevamente.
-- Taller demo para acreditar compras, mantenimientos, referidos y eventos, validar cupones y exportar CSV.
+- Roles de demo **cliente / administrador**: el registro crea clientes; el acceso **Entrar como administrador demo** permite acreditar actividades, validar cupones y exportar CSV.
+- Marca visible y editable en Mi club. Las cuentas anteriores conservan su marca; si no tenían una, pueden vincularla desde el perfil sin perder saldos ni compras.
 - Prevención de duplicados de referencias por marca y de recompensas repetidas al mismo referido.
 - Diseño responsive, diálogos nativos, navegación por teclado y reducción de movimiento.
 
@@ -55,8 +56,8 @@ npm run dev -- --host 127.0.0.1
 3. En **Marketplace**, abre **Zontes 703F → Comprar con USDT de prueba → Confirmar compra de prueba**.
 4. El saldo queda en **8.510 USDT**, recibes **1.000 puntos Zontes** adicionales y se guarda un comprobante en **Mi club → Mis compras**. Recargar la página conserva los cambios.
 5. En **Recompensas**, abre **Mantenimiento básico** Zontes y canjea 500 puntos. Aparece la tarjeta con foto; **Mostrar QR para el taller** despliega el identificador.
-6. Pulsa **Probar validación en taller** y confirma la autorización del cliente y el uso. El beneficio pasa a **Utilizados y vencidos**, marcado **Consumido · quema simulada**.
-7. Un segundo uso se rechaza. Se conserva el historial sin volver a descontar puntos.
+6. Pulsa **Probar validación en taller → Entrar como administrador demo** y confirma la autorización del cliente y el uso. El beneficio pasa a **Utilizados y vencidos**, marcado **Consumido · quema simulada**.
+7. Para volver al cliente, entra en **Mi club → Salir de la demo → Iniciar sesión** con su correo. Un segundo uso se rechaza. Se conserva el historial sin volver a descontar puntos.
 
 Una compra de prueba es una transición local, sin pagos ni reserva comercial. El comprobante tiene una clave de operación para evitar cobrar o acreditar puntos dos veces al repetir una confirmación.
 
@@ -74,9 +75,15 @@ La opción **Sobre la demo y sus fuentes → Reiniciar datos de esta demo** rest
 
 **Esta etapa es frontend.** No incluye backend, verificación de correo, autenticación segura, contratos, pagos, wallets, tokens ni NFTs reales. El saldo USDT ficticio, las compras, los puntos y cupones se guardan en `localStorage` del navegador actual; no se comparten entre dispositivos.
 
-El taller demo tiene acceso libre para probar el flujo. Su casilla de autorización no sustituye una verificación de titularidad; el QR solo identifica el cupón local.
+El taller requiere una cuenta con rol administrador dentro de la demo. Ese acceso es público y sirve para probar el frontend; la autorización real se hará en el servidor. Su casilla de autorización no sustituye una verificación de titularidad; el QR solo identifica el cupón local.
 
 La siguiente etapa integrará **EVM en Base Sepolia (chain ID 84532)**: registro por correo con creación automática de wallet, puntos tokenizados y cupones ERC-721 que se consumen y queman con autorización del cliente y del taller. Se prevé descontar puntos y emitir el NFT en una sola transacción. Los cupones usados conservarán su historial.
+
+## Clientes existentes y roles
+
+La autenticación real y la sincronización con la base de clientes existente se integrarán en el backend. La elección de marca en la demo guarda la asociación del perfil, pero no verifica que exista un registro comercial en esa empresa. Los administradores se asignarán desde el servidor; el cliente no podrá elegir ese rol al registrarse.
+
+[Plan de integración con clientes existentes](docs/CUSTOMER_INTEGRATION.md): identidad verificada, asociación por marca, identificación del cliente externo, permisos y sincronización sin duplicar movimientos.
 
 ## Datos de las marcas
 
