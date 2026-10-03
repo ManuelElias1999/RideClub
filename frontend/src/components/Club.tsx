@@ -188,6 +188,9 @@ export default function Club({
   onLinkBrand: (b: Brand) => void;
 }) {
   const { brands, bikes, allBikes, allCompanies } = useCatalog();
+  const referralRule = allCompanies.find(
+    (company) => company.name === account?.brand,
+  )?.pointRules.Referido;
   const [tab, setTab] = useState("benefits");
   const [used, setUsed] = useState(false);
   if (!account)
@@ -256,7 +259,7 @@ export default function Club({
           </span>
         </div>
         <p>
-          Tu saldo para probar compras. Cada moto suma 1.000 puntos de su marca.
+          Tu saldo para probar compras. Cada empresa define cuántos puntos entrega y cuándo vencen.
         </p>
         <button className="button secondary small" onClick={onFund}>
           Recargar 20.000 USDT demo
@@ -304,7 +307,7 @@ export default function Club({
           </h2>
           <p>
             Comparte tu número. Por un referido confirmado, puedes ganar{" "}
-            <strong>200 puntos</strong>.
+            <strong>{referralRule?.points ?? 200} puntos</strong>.
           </p>
           <button
             className="ref-copy"
@@ -574,8 +577,8 @@ export default function Club({
             <span>
               Registrarse no acredita puntos automáticamente.
               <small>
-                La primera compra de prueba acredita 200 puntos al rider que
-                invitó. En producción, la tienda confirmará la compra.
+                La primera compra de prueba acredita {referralRule?.points ?? 200} puntos al rider que
+                invitó. Esos puntos vencen en {referralRule?.expiryDays ?? 365} días.
               </small>
             </span>
           </div>
@@ -659,6 +662,9 @@ function ActivityRow({ activity: a }: { activity: Activity }) {
         </strong>
         <span>
           {date(a.date)} · {a.brand}
+          {a.points > 0 && a.expiresAt && (
+            <> · {a.expiredAt ? "Vencidos" : `Vencen ${date(a.expiresAt)}`}</>
+          )}
         </span>
       </div>
       <strong className={a.points > 0 ? "positive" : ""}>

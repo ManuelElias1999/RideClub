@@ -1,3 +1,4 @@
+import { type CSSProperties } from "react";
 import { ArrowRight, Coins, Clock, Ticket, ArrowUpRight } from "lucide-react";
 import { type Brand, type Reward } from "../data/catalog";
 import { useCatalog } from "../data/CatalogContext";
@@ -18,7 +19,8 @@ export default function Rewards({
   onSelect: (r: Reward) => void;
   onJoin: () => void;
 }) {
-  const { brands, rewards } = useCatalog();
+  const { brands, rewards, brandInfo } = useCatalog();
+  const selectedCompany = filter === "Todas" ? undefined : brandInfo[filter];
   return (
     <section className="page-section">
       <div className="page-intro">
@@ -82,6 +84,19 @@ export default function Rewards({
           </button>
         ))}
       </div>
+      {selectedCompany && (
+        <div
+          className="brand-focus-banner rewards-brand-focus"
+          style={{ "--brand-accent": selectedCompany.color } as CSSProperties}
+        >
+          <div>
+            <span className="eyebrow">BENEFICIOS {filter.toUpperCase()}</span>
+            <h2>{selectedCompany.subtitle}</h2>
+            <p>Estos puntos y beneficios pertenecen exclusivamente al ecosistema {filter}.</p>
+          </div>
+          <BrandLogo brand={filter} />
+        </div>
+      )}
       <div className="reward-grid">
         {rewards
           .filter((r) => filter === "Todas" || r.brand === filter)

@@ -1,6 +1,18 @@
 import { describe, expect, it } from "vitest";
-import { enterAdminDemo, initialDemo, login } from "./demo";
-import { readBusiness, saveBike, saveCompany } from "./business";
+import {
+  applyPointExpirations,
+  buy,
+  enterAdminDemo,
+  initialDemo,
+  login,
+} from "./demo";
+import {
+  readBusiness,
+  saveBike,
+  saveClient,
+  saveCompany,
+  savePointRules,
+} from "./business";
 
 describe("RideClub business dashboards", () => {
   it("lets the global admin register and publish a company", () => {
@@ -55,5 +67,61 @@ describe("RideClub business dashboards", () => {
         specs: [],
       }),
     ).toThrow("No tienes acceso");
+  });
+
+  it("applies company-specific point values and expiration dates", () => {
+    let state = enterAdminDemo(initialDemo());
+    const zontes = state.companies.find((company) => company.name === "Zontes")!;
+    state = savePointRules(state, zontes.id, {
+      ...zontes.pointRules,
+      Compra: { points: 750, expiryDays: 30 },
+    });
+    state = login(state, "manuel@rideclub.demo");
+    const result = buy(state, "demo-rider", "z703f", "CUSTOM-RULE");
+    expect(result.purchase.points).toBe(750);
+    const activity = result.state.activities.find(
+      (item) => item.reference === result.purchase.id && item.kind === "Compra",
+    )!;
+    expect(
+      Math.round(
+        (new Date(activity.expiresAt!).getTime() -
+          new Date(activity.date).getTime()) /
+          86400000,
+      ),
+    ).toBe(30);
+  });
+
+  it("expires earned points and preserves a trace in the activity history", () => {
+    const state = initialDemo();
+    const future = new Date(Date.now() + 366 * 86400000);
+    const expired = applyPointExpirations(state, future);
+    expect(expired.accounts[0].points.Zontes).toBe(0);
+    expect(expired.activities[0].label).toBe("Vencimiento de puntos");
+    expect(applyPointExpirations(expired, future).accounts[0].points.Zontes).toBe(
+      0,
+    );
+  });
+
+  it("lets the global admin create, edit and block a client", () => {
+    let state = enterAdminDemo(initialDemo());
+    state = saveClient(state, {
+      name: "Cliente prueba",
+      email: "cliente@demo.com",
+      phone: "+59170000001",
+      brand: "NIU",
+      status: "active",
+    });
+    const client = state.accounts.find(
+      (account) => account.email === "cliente@demo.com",
+    )!;
+    state = saveClient(
+      state,
+      { ...client, name: "Cliente actualizado", status: "blocked" },
+      client.id,
+    );
+    expect(state.accounts.find((account) => account.id === client.id)?.name).toBe(
+      "Cliente actualizado",
+    );
+    expect(() => login(state, "cliente@demo.com")).toThrow("bloqueada");
   });
 });

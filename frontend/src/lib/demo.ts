@@ -10,6 +10,15 @@ import {
 } from "../data/catalog";
 import { normalizePhone, type PhoneInput } from "./phone";
 export const demoFunding = 20000;
+export type PointRule = { points: number; expiryDays: number };
+export type PointRuleSet = Record<ActivityKind, PointRule>;
+export const defaultPointRules = (): PointRuleSet =>
+  Object.fromEntries(
+    Object.entries(pointsRules).map(([kind, points]) => [
+      kind,
+      { points, expiryDays: 365 },
+    ]),
+  ) as PointRuleSet;
 export type Account = {
   id: string;
   name: string;
@@ -25,6 +34,7 @@ export type Account = {
   wallet: { status: "pending"; chainId: 84532 };
   points: Record<Brand, number>;
   favorites: string[];
+  status?: "active" | "blocked" | "deleted";
 };
 export type Coupon = {
   id: string;
@@ -49,6 +59,8 @@ export type Activity = {
   date: string;
   reference?: string;
   kind?: ActivityKind;
+  expiresAt?: string;
+  expiredAt?: string;
 };
 export type Purchase = {
   id: string;
@@ -72,6 +84,7 @@ export type Company = {
   status: "pending" | "active" | "suspended";
   createdAt: string;
   wallet: { chainId: 84532; address?: string };
+  pointRules: PointRuleSet;
 };
 export const initialCompanies = (): Company[] =>
   brands.map((name) => ({
@@ -83,6 +96,7 @@ export const initialCompanies = (): Company[] =>
     status: "active",
     createdAt: new Date().toISOString(),
     wallet: { chainId: 84532 },
+    pointRules: defaultPointRules(),
   }));
 export type Demo = {
   version: 1;
@@ -115,6 +129,7 @@ const seed: Account = {
   wallet: { status: "pending", chainId: 84532 },
   points: { Zontes: 1000, NIU: 0, Kiden: 0 },
   favorites: [],
+  status: "active",
 };
 export const initialDemo = (): Demo => ({
   version: 1,
@@ -136,6 +151,7 @@ export const initialDemo = (): Demo => ({
       date: new Date().toISOString(),
       reference: "DEMO-001",
       kind: "Compra",
+      expiresAt: new Date(Date.now() + 365 * 86400000).toISOString(),
     },
   ],
 });
@@ -191,6 +207,7 @@ export function register(
     wallet: { status: "pending", chainId: 84532 },
     points: Object.fromEntries(state.companies.map((c) => [c.name, 0])),
     favorites: [],
+    status: "active",
   };
   return {
     ...state,
@@ -239,7 +256,76 @@ export function login(state: Demo, email: string): Demo {
     throw Error(
       "No encontramos este correo en el navegador. Crea una cuenta de demo.",
     );
+  if (a.status === "blocked")
+    throw Error("Esta cuenta está bloqueada. Contacta al administrador.");
+  if (a.status === "deleted")
+    throw Error("Esta cuenta fue dada de baja.");
   return { ...state, currentId: a.id };
+}
+
+export function pointRule(
+  state: Demo,
+  brand: Brand,
+  kind: ActivityKind,
+): PointRule {
+  return (
+    state.companies.find((company) => company.name === brand)?.pointRules?.[
+      kind
+    ] ?? defaultPointRules()[kind]
+  );
+}
+
+export function applyPointExpirations(
+  state: Demo,
+  now = new Date(),
+): Demo {
+  const expiring = state.activities.filter(
+    (activity) =>
+      activity.points > 0 &&
+      activity.expiresAt &&
+      !activity.expiredAt &&
+      new Date(activity.expiresAt) <= now,
+  );
+  if (!expiring.length) return state;
+  const deductions = new Map<string, number>();
+  expiring.forEach((activity) => {
+    const key = `${activity.accountId}\u0000${activity.brand}`;
+    deductions.set(key, (deductions.get(key) ?? 0) + activity.points);
+  });
+  const expiryActivities: Activity[] = [];
+  const accounts = state.accounts.map((account) => {
+    let changed = false;
+    const nextPoints = { ...account.points };
+    state.companies.forEach((company) => {
+      const key = `${account.id}\u0000${company.name}`;
+      const requested = deductions.get(key) ?? 0;
+      const deducted = Math.min(nextPoints[company.name] ?? 0, requested);
+      if (!deducted) return;
+      changed = true;
+      nextPoints[company.name] -= deducted;
+      expiryActivities.push({
+        id: id(),
+        accountId: account.id,
+        brand: company.name,
+        label: "Vencimiento de puntos",
+        points: -deducted,
+        date: now.toISOString(),
+      });
+    });
+    return changed ? { ...account, points: nextPoints } : account;
+  });
+  return {
+    ...state,
+    accounts,
+    activities: [
+      ...expiryActivities,
+      ...state.activities.map((activity) =>
+        expiring.some((item) => item.id === activity.id)
+          ? { ...activity, expiredAt: now.toISOString() }
+          : activity,
+      ),
+    ],
+  };
 }
 export function redeem(
   state: Demo,
@@ -385,7 +471,9 @@ export function credit(
     )
   )
     throw Error("Este referido ya recibió su recompensa.");
-  const points = pointsRules[kind];
+  const rule = pointRule(state, brand, kind);
+  const points = rule.points;
+  const now = new Date();
   return {
     ...state,
     accounts: state.accounts.map((x) =>
@@ -403,7 +491,10 @@ export function credit(
             ? `Referido confirmado: ${a.id}`
             : `${kind} confirmada · ${reference}`,
         points,
-        date: new Date().toISOString(),
+        date: now.toISOString(),
+        expiresAt: new Date(
+          now.getTime() + rule.expiryDays * 86400000,
+        ).toISOString(),
         reference,
         kind,
       },
@@ -418,7 +509,13 @@ export function loadDemo(): Demo {
     if (raw) {
       const s = JSON.parse(raw);
       const companies: Company[] = Array.isArray(s.companies)
-        ? s.companies
+        ? s.companies.map((company: Company) => ({
+            ...company,
+            pointRules: {
+              ...defaultPointRules(),
+              ...(company.pointRules ?? {}),
+            },
+          }))
         : initialCompanies();
       if (
         s.version === 1 &&
@@ -438,7 +535,7 @@ export function loadDemo(): Demo {
               (Number.isFinite(a.balanceUSDT) && a.balanceUSDT >= 0)),
         )
       ) {
-        return {
+        return applyPointExpirations({
           ...s,
           companies,
           accounts: s.accounts.map((a: Account) => ({
@@ -459,6 +556,7 @@ export function loadDemo(): Demo {
             },
             balanceUSDT:
               a.balanceUSDT === undefined ? demoFunding : a.balanceUSDT,
+            status: a.status ?? "active",
           })),
           purchases: Array.isArray(s.purchases) ? s.purchases : [],
           catalogBikes: Array.isArray(s.catalogBikes)
@@ -468,7 +566,7 @@ export function loadDemo(): Demo {
           catalogRewards: Array.isArray(s.catalogRewards)
             ? s.catalogRewards
             : structuredClone(rewards),
-        };
+        });
       }
     }
   } catch {
@@ -505,6 +603,8 @@ export function buy(
     throw Error("Este modelo necesita una cotización antes de comprar.");
   if (account.balanceUSDT < bike.price)
     throw Error("Saldo USDT de prueba insuficiente. Recarga desde Mi club.");
+  const purchaseRule = pointRule(state, bike.brand, "Compra");
+  const referralRule = pointRule(state, bike.brand, "Referido");
   const purchase: Purchase = {
     id: `DEMO-${id().toUpperCase()}`,
     ownerId,
@@ -512,7 +612,7 @@ export function buy(
     brand: bike.brand,
     model: bike.name,
     amountUSDT: bike.price,
-    points: pointsRules.Compra,
+    points: purchaseRule.points,
     createdAt: new Date().toISOString(),
     operationId,
   };
@@ -543,7 +643,7 @@ export function buy(
                 ...a,
                 points: {
                   ...a.points,
-                  [bike.brand]: a.points[bike.brand] + pointsRules.Referido,
+                  [bike.brand]: a.points[bike.brand] + referralRule.points,
                 },
               }
             : a,
@@ -558,7 +658,11 @@ export function buy(
           points: purchase.points,
           date: purchase.createdAt,
           reference: purchase.id,
-          kind: "Compra",
+            kind: "Compra",
+            expiresAt: new Date(
+              new Date(purchase.createdAt).getTime() +
+                purchaseRule.expiryDays * 86400000,
+            ).toISOString(),
         },
         ...(awardReferral
           ? [
@@ -567,10 +671,14 @@ export function buy(
                 accountId: inviter.id,
                 brand: bike.brand,
                 label: `Referido confirmado: ${ownerId}`,
-                points: pointsRules.Referido,
+                points: referralRule.points,
                 date: purchase.createdAt,
                 reference: purchase.id,
                 kind: "Referido" as const,
+                expiresAt: new Date(
+                  new Date(purchase.createdAt).getTime() +
+                    referralRule.expiryDays * 86400000,
+                ).toISOString(),
               },
             ]
           : []),
@@ -625,6 +733,7 @@ export function enterAdminDemo(state: Demo): Demo {
     code,
     balanceUSDT: 0,
     points: { Zontes: 0, NIU: 0, Kiden: 0 },
+    status: "active",
   };
   return {
     ...state,

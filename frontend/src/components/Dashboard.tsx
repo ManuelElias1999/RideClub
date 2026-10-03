@@ -1,4 +1,9 @@
-import { useState, type FormEvent, type ReactNode } from "react";
+import {
+  useState,
+  type CSSProperties,
+  type FormEvent,
+  type ReactNode,
+} from "react";
 import {
   ArrowUpRight,
   BarChart3,
@@ -21,17 +26,30 @@ import {
   Search,
   Check,
   Copy,
+  Settings2,
+  UserPlus,
+  TrendingUp,
+  CalendarClock,
 } from "lucide-react";
-import type { Account, Company, Demo } from "../lib/demo";
+import type {
+  Account,
+  Company,
+  Demo,
+  PointRuleSet,
+} from "../lib/demo";
 import type { Bike, Reward } from "../data/catalog";
 import {
   archiveItem,
   readBusiness,
+  saveClient,
   saveBike,
   saveCompany,
+  savePointRules,
   saveReward,
   saveWallet,
+  trendSeries,
   type BikeDraft,
+  type ClientDraft,
   type CompanyDraft,
   type RewardDraft,
   type BusinessView,
@@ -41,6 +59,7 @@ type Tab =
   | "overview"
   | "companies"
   | "clients"
+  | "rules"
   | "purchases"
   | "bikes"
   | "rewards"
@@ -50,6 +69,8 @@ type Tab =
 type Mutation = (change: (s: Demo) => Demo) => string | null;
 type Editor =
   | { kind: "company"; item?: Company }
+  | { kind: "client"; item?: Account }
+  | { kind: "rules"; item: Company }
   | { kind: "bike"; item?: Bike }
   | { kind: "reward"; item?: Reward }
   | { kind: "wallet"; item: Company }
@@ -58,6 +79,7 @@ const tabs = [
   ["overview", "Resumen", BarChart3],
   ["companies", "Empresas", Building2],
   ["clients", "Clientes", Users],
+  ["rules", "Reglas de puntos", Settings2],
   ["purchases", "Compras", ShoppingBag],
   ["bikes", "Motos", BikeIcon],
   ["rewards", "Recompensas", Gift],
@@ -95,6 +117,10 @@ export default function Dashboard({
   const m = view.metrics;
   const companies = global ? state.companies : own ? [own] : [];
   const writable = global || own?.status !== "suspended";
+  const themedCompany = own ?? state.companies.find((c) => c.name === brand);
+  const themeStyle = themedCompany
+    ? ({ "--company-accent": themedCompany.color } as CSSProperties)
+    : undefined;
   const matches = (value: string) =>
     value.toLowerCase().includes(search.toLowerCase());
   function mutate(fn: (s: Demo) => Demo) {
@@ -291,7 +317,10 @@ export default function Dashboard({
       ? companies
       : companies.filter((c) => c.name === (global ? brand : own?.name));
   return (
-    <section className="page-section business-page">
+    <section
+      className={`page-section business-page ${themedCompany ? "company-themed" : ""}`}
+      style={themeStyle}
+    >
       <div className="business-shell">
         <aside className="business-sidebar">
           <div className="business-identity">
@@ -341,6 +370,20 @@ export default function Dashboard({
           </div>
         </aside>
         <div className="business-content">
+          {themedCompany && (
+            <div className="company-context-banner">
+              <div>
+                <span className="eyebrow">
+                  ESPACIO DE MARCA · {themedCompany.name.toUpperCase()}
+                </span>
+                <h2>{themedCompany.subtitle}</h2>
+                <p>
+                  Métricas, clientes y catálogo filtrados para esta empresa.
+                </p>
+              </div>
+              <BrandLogo brand={themedCompany.name} />
+            </div>
+          )}
           <div className="business-heading">
             <div>
               <span className="eyebrow">
@@ -547,6 +590,12 @@ export default function Dashboard({
                   </p>
                 </Panel>
               </div>
+              <Panel
+                title="Tendencias de los últimos 14 días"
+                subtitle="Registros, ventas y canjes por día para detectar movimiento y crecimiento."
+              >
+                <TrendChart view={view} accent={themedCompany?.color} />
+              </Panel>
               {global && (
                 <Panel
                   title="Resultados por empresa"
@@ -676,17 +725,28 @@ export default function Dashboard({
               title="Tus clientes"
               subtitle="Incluye perfiles registrados y personas que compraron o canjearon en el ámbito seleccionado."
               action={
-                <SearchBox
-                  value={search}
-                  onChange={setSearch}
-                  label="Buscar clientes"
-                />
+                <div className="panel-actions">
+                  <SearchBox
+                    value={search}
+                    onChange={setSearch}
+                    label="Buscar clientes"
+                  />
+                  {global && (
+                    <button
+                      className="button primary small"
+                      onClick={() => setEditor({ kind: "client" })}
+                    >
+                      <UserPlus size={16} /> Registrar cliente
+                    </button>
+                  )}
+                </div>
               }
             >
               <Table
                 headings={[
                   "Cliente",
                   "Contacto",
+                  "Estado",
                   "Vínculo",
                   "Motos",
                   "USDT demo",
@@ -715,6 +775,9 @@ export default function Dashboard({
                           <small>{a.phone ?? "Sin celular"}</small>
                         </td>
                         <td>
+                          <ClientStatus status={a.status ?? "active"} />
+                        </td>
+                        <td>
                           {view.brand
                             ? a.brand === view.brand
                               ? "Registrado en tu empresa"
@@ -731,6 +794,16 @@ export default function Dashboard({
                           >
                             Ver cliente <ArrowUpRight size={15} />
                           </button>
+                          {global && (
+                            <button
+                              className="text-link"
+                              onClick={() =>
+                                setEditor({ kind: "client", item: a })
+                              }
+                            >
+                              <Pencil size={14} /> Editar
+                            </button>
+                          )}
                         </td>
                       </tr>
                     );
@@ -739,6 +812,53 @@ export default function Dashboard({
               {view.clients.length === 0 && (
                 <BusinessEmpty text="Aún no hay clientes en esta empresa. Los registros y compradores aparecerán aquí." />
               )}
+            </Panel>
+          )}
+          {tab === "rules" && (
+            <Panel
+              title="Reglas de puntuación"
+              subtitle="Cada empresa define cuánto entrega por actividad y cuándo vencen esos puntos."
+            >
+              <div className="points-rules-grid">
+                {selectedCompanies.map((company) => (
+                  <article className="points-rule-company" key={company.id}>
+                    <div className="points-rule-brand">
+                      <BrandLogo brand={company.name} />
+                      <span>
+                        <strong>{company.name}</strong>
+                        <small>Reglas activas en compras y acreditaciones</small>
+                      </span>
+                    </div>
+                    <div className="points-rule-list">
+                      {Object.entries(company.pointRules).map(
+                        ([kind, rule]) => (
+                          <div key={kind}>
+                            <span>{kind}</span>
+                            <strong>{fmt(rule.points)} puntos</strong>
+                            <small>Vencen en {rule.expiryDays} días</small>
+                          </div>
+                        ),
+                      )}
+                    </div>
+                    <button
+                      className="button secondary small"
+                      disabled={!writable}
+                      onClick={() => setEditor({ kind: "rules", item: company })}
+                    >
+                      <Settings2 size={15} /> Configurar reglas
+                    </button>
+                  </article>
+                ))}
+              </div>
+              <div className="expiry-explanation">
+                <CalendarClock size={21} />
+                <span>
+                  <strong>Vencimiento activo.</strong> Cada nueva acreditación
+                  guarda su fecha de expiración. Al abrir la aplicación, los
+                  puntos vencidos se descuentan y quedan registrados en el
+                  historial.
+                </span>
+              </div>
             </Panel>
           )}
           {tab === "purchases" && (
@@ -1017,6 +1137,13 @@ export default function Dashboard({
                         {a.label.startsWith("Referido confirmado:")
                           ? "Referido confirmado"
                           : a.label}
+                        {a.points > 0 && a.expiresAt && (
+                          <small>
+                            {a.expiredAt
+                              ? `Venció ${date(a.expiredAt)}`
+                              : `Vence ${date(a.expiresAt)}`}
+                          </small>
+                        )}
                       </td>
                       <td className={a.points > 0 ? "positive" : ""}>
                         {a.points > 0 ? "+" : ""}
@@ -1059,6 +1186,25 @@ export default function Dashboard({
           onClose={() => setEditor(undefined)}
           onSave={(draft) =>
             mutate((s) => saveCompany(s, draft, editor.item?.id))
+          }
+        />
+      )}
+      {editor?.kind === "client" && (
+        <ClientEditor
+          item={editor.item}
+          companies={state.companies}
+          onClose={() => setEditor(undefined)}
+          onSave={(draft) =>
+            mutate((s) => saveClient(s, draft, editor.item?.id))
+          }
+        />
+      )}
+      {editor?.kind === "rules" && (
+        <PointRulesEditor
+          company={editor.item}
+          onClose={() => setEditor(undefined)}
+          onSave={(rules) =>
+            mutate((s) => savePointRules(s, editor.item.id, rules))
           }
         />
       )}
@@ -1356,6 +1502,75 @@ function ModelSales({ view }: { view: BusinessView }) {
     <BusinessEmpty text="El ranking de modelos aparecerá con tu primera venta." />
   );
 }
+
+function ClientStatus({
+  status,
+}: {
+  status: "active" | "blocked" | "deleted";
+}) {
+  return (
+    <span className={`client-status ${status}`}>
+      {status === "active"
+        ? "Activo"
+        : status === "blocked"
+          ? "Bloqueado"
+          : "Dado de baja"}
+    </span>
+  );
+}
+
+function TrendChart({
+  view,
+  accent,
+}: {
+  view: BusinessView;
+  accent?: string;
+}) {
+  const points = trendSeries(view, 14);
+  const maximum = Math.max(
+    1,
+    ...points.map((point) =>
+      Math.max(point.registrations, point.redemptions, point.sales / 1000),
+    ),
+  );
+  return (
+    <div className="trend-chart" role="img" aria-label="Tendencias de registros, ventas y canjes durante los últimos 14 días">
+      <div className="trend-legend">
+        <span><i className="registrations" /> Registros</span>
+        <span><i className="sales" /> Ventas · cada barra representa miles de USDT demo</span>
+        <span><i className="redemptions" /> Canjes</span>
+      </div>
+      <div className="trend-bars">
+        {points.map((point) => (
+          <div className="trend-day" key={point.key}>
+            <div className="trend-columns">
+              <i
+                className="registrations"
+                style={{ height: `${Math.max(2, (point.registrations / maximum) * 100)}%` }}
+                title={`${point.registrations} registros`}
+              />
+              <i
+                className="sales"
+                style={{
+                  height: `${Math.max(2, (point.sales / 1000 / maximum) * 100)}%`,
+                  background: accent,
+                }}
+                title={`${fmt(point.sales)} USDT demo`}
+              />
+              <i
+                className="redemptions"
+                style={{ height: `${Math.max(2, (point.redemptions / maximum) * 100)}%` }}
+                title={`${point.redemptions} canjes`}
+              />
+            </div>
+            <span>{point.label}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function ImageField({
   label,
   value,
@@ -1418,6 +1633,132 @@ function ImageField({
     </div>
   );
 }
+
+function ClientEditor({
+  item,
+  companies,
+  onClose,
+  onSave,
+}: {
+  item?: Account;
+  companies: Company[];
+  onClose: () => void;
+  onSave: (draft: ClientDraft) => string | null;
+}) {
+  const [form, setForm] = useState<ClientDraft>({
+    name: item?.name ?? "",
+    email: item?.email ?? "",
+    phone: item?.phone ?? "+591",
+    brand: item?.brand ?? companies.find((company) => company.status === "active")?.name,
+    status: item?.status ?? "active",
+  });
+  const [error, setError] = useState("");
+  function submit(event: FormEvent) {
+    event.preventDefault();
+    const result = onSave(form);
+    if (result) setError(result);
+  }
+  return (
+    <Modal title={item ? `Editar cliente · ${item.name}` : "Registrar cliente"} onClose={onClose}>
+      <form className="stack-form dashboard-editor" onSubmit={submit}>
+        <label>
+          Nombre completo
+          <input required value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} />
+        </label>
+        <label>
+          Correo electrónico
+          <input type="email" required value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} />
+        </label>
+        <label>
+          Celular internacional
+          <input required value={form.phone ?? ""} onChange={(event) => setForm({ ...form, phone: event.target.value })} placeholder="+59170000000" />
+        </label>
+        <label>
+          Empresa vinculada
+          <select required value={form.brand ?? ""} onChange={(event) => setForm({ ...form, brand: event.target.value })}>
+            {companies.map((company) => (
+              <option key={company.id} value={company.name}>{company.name}</option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Estado de la cuenta
+          <select value={form.status} onChange={(event) => setForm({ ...form, status: event.target.value as ClientDraft["status"] })}>
+            <option value="active">Activa</option>
+            <option value="blocked">Bloqueada</option>
+            <option value="deleted">Dada de baja</option>
+          </select>
+          <small>La baja es lógica: conserva compras, canjes y auditoría.</small>
+        </label>
+        {error && <p className="form-error" role="alert">{error}</p>}
+        <button className="button primary full" type="submit">
+          {item ? "Guardar cliente" : "Registrar cliente"}
+        </button>
+      </form>
+    </Modal>
+  );
+}
+
+function PointRulesEditor({
+  company,
+  onClose,
+  onSave,
+}: {
+  company: Company;
+  onClose: () => void;
+  onSave: (rules: PointRuleSet) => string | null;
+}) {
+  const [rules, setRules] = useState<PointRuleSet>(structuredClone(company.pointRules));
+  const [error, setError] = useState("");
+  function submit(event: FormEvent) {
+    event.preventDefault();
+    const result = onSave(rules);
+    if (result) setError(result);
+  }
+  return (
+    <Modal title={`Reglas de puntos · ${company.name}`} onClose={onClose} wide>
+      <form className="stack-form dashboard-editor" onSubmit={submit}>
+        <div className="rule-editor-grid">
+          {Object.entries(rules).map(([kind, rule]) => (
+            <fieldset key={kind}>
+              <legend>{kind}</legend>
+              <label>
+                Puntos entregados
+                <input
+                  type="number"
+                  min="0"
+                  max="1000000"
+                  step="1"
+                  required
+                  value={rule.points}
+                  onChange={(event) => setRules({ ...rules, [kind]: { ...rule, points: Number(event.target.value) } })}
+                />
+              </label>
+              <label>
+                Vencimiento en días
+                <input
+                  type="number"
+                  min="1"
+                  max="3650"
+                  step="1"
+                  required
+                  value={rule.expiryDays}
+                  onChange={(event) => setRules({ ...rules, [kind]: { ...rule, expiryDays: Number(event.target.value) } })}
+                />
+              </label>
+            </fieldset>
+          ))}
+        </div>
+        <p className="fine-print">
+          Las reglas se aplican a nuevas acreditaciones. Los puntos ya entregados conservan su fecha original.
+        </p>
+        {error && <p className="form-error" role="alert">{error}</p>}
+        <button className="button primary full" type="submit">Guardar reglas</button>
+      </form>
+    </Modal>
+  );
+}
+
 function CompanyEditor({
   company,
   onClose,

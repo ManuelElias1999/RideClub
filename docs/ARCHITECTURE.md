@@ -16,6 +16,8 @@ React 19 + TypeScript + Vite. Interfaz responsive con CSS propio, Lucide y QRCod
 - `src/components/Dashboard.tsx`: administración global y workspace empresarial con métricas, filtros, exportaciones, clientes, compras, catálogos, canjes y wallets.
 - `src/data/CatalogContext.tsx`: catálogo dinámico derivado de empresas autorizadas y elementos publicados.
 - `src/lib/business.ts`: control de alcance por rol, consultas agregadas, auditoría y operaciones de empresas, motos, recompensas y wallets.
+- Las reglas de puntuación pertenecen a cada empresa y guardan importe y vigencia para compra, referido, mantenimiento y evento. Cada acreditación registra `expiresAt`; al cargar la aplicación, los vencimientos pendientes descuentan el saldo una sola vez y generan un movimiento trazable.
+- La gestión de clientes permite altas administrativas, edición, bloqueo y baja lógica. La baja conserva compras y canjes; el backend deberá aplicar las mismas decisiones mediante RBAC y auditoría persistente.
 - `src/components/ui.tsx`: diálogos nativos, logos y componentes comunes.
 - `src/App.tsx`: composición, navegación por hash, persistencia y operaciones del usuario.
 

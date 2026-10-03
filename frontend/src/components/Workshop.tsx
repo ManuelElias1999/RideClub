@@ -8,7 +8,7 @@ import {
   Download,
   Wrench,
 } from "lucide-react";
-import { pointsRules, type Brand, type ActivityKind } from "../data/catalog";
+import { type Brand, type ActivityKind } from "../data/catalog";
 import { useCatalog } from "../data/CatalogContext";
 import type { Demo } from "../lib/demo";
 import { date, fmt, SectionHead } from "./ui";
@@ -56,6 +56,9 @@ export default function Workshop({
   const [workshop, setWorkshop] = useState("Taller RideClub · demo");
   const [result, setResult] = useState("");
   const [creditResult, setCreditResult] = useState("");
+  const activeRules =
+    allCompanies.find((company) => company.name === brand)?.pointRules ??
+    allCompanies[0]?.pointRules;
   const creditSubmit = (e: FormEvent) => {
     e.preventDefault();
     if (onCredit(client, brand, kind, ref, confirmed)) {
@@ -172,7 +175,7 @@ export default function Workshop({
                 value={kind}
                 onChange={(e) => setKind(e.target.value as ActivityKind)}
               >
-                {Object.keys(pointsRules).map((k) => (
+                {Object.keys(activeRules ?? {}).map((k) => (
                   <option key={k}>{k}</option>
                 ))}
               </select>
@@ -181,14 +184,14 @@ export default function Workshop({
           <div className="award-summary">
             <span>Puntos propuestos</span>
             <strong>
-              +{fmt(pointsRules[kind])} {brand}
+              +{fmt(activeRules?.[kind].points ?? 0)} {brand}
+              <small>Vencen en {activeRules?.[kind].expiryDays ?? 365} días</small>
             </strong>
           </div>
           {kind === "Referido" && (
             <p className="fine-print">
-              Selecciona al cliente invitado cuya compra se confirmó. Los 200
-              puntos se acreditarán a quien lo refirió; solo una recompensa por
-              invitado.
+              Selecciona al cliente invitado cuya compra se confirmó. Los {activeRules?.Referido.points ?? 0}
+              puntos se acreditarán a quien lo refirió; solo una recompensa por invitado.
             </p>
           )}
           <label>

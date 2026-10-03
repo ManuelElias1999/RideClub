@@ -1,7 +1,21 @@
 import type { Bike, Brand, Reward } from "../data/catalog";
-import { id, type Account, type Company, type Demo } from "./demo";
-export type CompanyDraft = Omit<Company, "id" | "createdAt" | "wallet"> & {
+import {
+  defaultPointRules,
+  id,
+  type Account,
+  type Company,
+  type Demo,
+  type PointRuleSet,
+} from "./demo";
+export type CompanyDraft = Omit<
+  Company,
+  "id" | "createdAt" | "wallet" | "pointRules"
+> & {
   walletAddress?: string;
+  pointRules?: PointRuleSet;
+};
+export type ClientDraft = Pick<Account, "name" | "email" | "phone" | "brand"> & {
+  status: "active" | "blocked" | "deleted";
 };
 export type BikeDraft = Omit<Bike, "id" | "brand" | "archived">;
 export type RewardDraft = Omit<Reward, "id" | "brand" | "archived">;
@@ -148,6 +162,8 @@ export function saveCompany(
     status: draft.status,
     createdAt: existing?.createdAt ?? new Date().toISOString(),
     wallet: { chainId: 84532, address: address || undefined },
+    pointRules:
+      draft.pointRules ?? existing?.pointRules ?? defaultPointRules(),
   };
   return audit(
     {
@@ -165,6 +181,126 @@ export function saveCompany(
     },
     company.id,
     existing ? "Empresa actualizada" : "Empresa registrada",
+    company.id,
+  );
+}
+
+function uniqueCode(state: Demo) {
+  let code: string;
+  do {
+    code = String(
+      10000000 + (crypto.getRandomValues(new Uint32Array(1))[0] % 90000000),
+    );
+  } while (state.accounts.some((account) => account.code === code));
+  return code;
+}
+
+export function saveClient(
+  state: Demo,
+  draft: ClientDraft,
+  accountId?: string,
+): Demo {
+  if (actor(state).role !== "admin")
+    throw Error("Solo el administrador global puede gestionar usuarios.");
+  const existing = accountId
+    ? state.accounts.find(
+        (account) => account.id === accountId && account.role === "client",
+      )
+    : undefined;
+  if (accountId && !existing) throw Error("El cliente ya no existe.");
+  const name = text(draft.name, "el nombre del cliente", 2, 80);
+  const email = draft.email.trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 160)
+    throw Error("Revisa el correo del cliente.");
+  if (
+    state.accounts.some(
+      (account) => account.id !== accountId && account.email === email,
+    ) ||
+    state.companies.some((company) => company.email === email) ||
+    email === "admin@rideclub.demo"
+  )
+    throw Error("Este correo ya está asociado a otra cuenta.");
+  if (
+    !draft.brand ||
+    !state.companies.some((company) => company.name === draft.brand)
+  )
+    throw Error("Selecciona una empresa válida para el perfil.");
+  const phone = draft.phone?.trim();
+  if (phone && !/^\+[1-9]\d{7,14}$/.test(phone))
+    throw Error("Usa el celular en formato internacional, por ejemplo +59170000000.");
+  if (!["active", "blocked", "deleted"].includes(draft.status))
+    throw Error("Selecciona un estado válido.");
+  const account: Account = existing
+    ? { ...existing, name, email, phone, brand: draft.brand, status: draft.status }
+    : {
+        id: id(),
+        name,
+        email,
+        phone,
+        brand: draft.brand,
+        role: "client",
+        createdAt: new Date().toISOString(),
+        balanceUSDT: 0,
+        code: uniqueCode(state),
+        wallet: { status: "pending", chainId: 84532 },
+        points: Object.fromEntries(
+          state.companies.map((company) => [company.name, 0]),
+        ),
+        favorites: [],
+        status: draft.status,
+      };
+  const company = state.companies.find((item) => item.name === draft.brand)!;
+  return audit(
+    {
+      ...state,
+      accounts: existing
+        ? state.accounts.map((item) =>
+            item.id === account.id ? account : item,
+          )
+        : [...state.accounts, account],
+    },
+    company.id,
+    existing
+      ? draft.status === "deleted"
+        ? "Cliente dado de baja"
+        : "Cliente actualizado"
+      : "Cliente registrado por administración",
+    account.id,
+  );
+}
+
+export function savePointRules(
+  state: Demo,
+  companyId: string,
+  rules: PointRuleSet,
+): Demo {
+  const company = assertCompanyAccess(state, companyId, true);
+  const normalized = Object.fromEntries(
+    Object.entries(rules).map(([kind, rule]) => {
+      if (
+        !Number.isInteger(rule.points) ||
+        rule.points < 0 ||
+        rule.points > 1000000
+      )
+        throw Error(`Revisa los puntos configurados para ${kind}.`);
+      if (
+        !Number.isInteger(rule.expiryDays) ||
+        rule.expiryDays < 1 ||
+        rule.expiryDays > 3650
+      )
+        throw Error(`La vigencia de ${kind} debe estar entre 1 y 3.650 días.`);
+      return [kind, rule];
+    }),
+  ) as PointRuleSet;
+  return audit(
+    {
+      ...state,
+      companies: state.companies.map((item) =>
+        item.id === company.id ? { ...item, pointRules: normalized } : item,
+      ),
+    },
+    company.id,
+    "Reglas de puntuación actualizadas",
     company.id,
   );
 }
@@ -373,6 +509,7 @@ export function readBusiness(
     .filter(
       (c) =>
         c.role === "client" &&
+        (a.role === "admin" || c.status !== "deleted") &&
         (!brand ||
           c.brand === brand ||
           allPurchases.some((p) => p.ownerId === c.id) ||
@@ -383,7 +520,10 @@ export function readBusiness(
       points: brand ? { [brand]: c.points[brand] ?? 0 } : c.points,
     }));
   const registered = clients.filter(
-    (c) => (!brand || c.brand === brand) && within(c.createdAt),
+    (c) =>
+      c.status !== "deleted" &&
+      (!brand || c.brand === brand) &&
+      within(c.createdAt),
   );
   const purchases = allPurchases.filter((p) => within(p.createdAt));
   const coupons = allCoupons.filter((c) => within(c.issuedAt));
@@ -419,3 +559,33 @@ export function readBusiness(
   };
 }
 export type BusinessView = ReturnType<typeof readBusiness>;
+
+export function trendSeries(view: BusinessView, days = 14) {
+  const end = new Date();
+  end.setHours(23, 59, 59, 999);
+  return Array.from({ length: days }, (_, index) => {
+    const start = new Date(end);
+    start.setDate(end.getDate() - (days - index - 1));
+    start.setHours(0, 0, 0, 0);
+    const finish = new Date(start);
+    finish.setHours(23, 59, 59, 999);
+    const inside = (value?: string) => {
+      if (!value) return false;
+      const time = new Date(value).getTime();
+      return time >= start.getTime() && time <= finish.getTime();
+    };
+    return {
+      key: start.toISOString().slice(0, 10),
+      label: start.toLocaleDateString("es-BO", {
+        day: "2-digit",
+        month: "short",
+      }),
+      registrations: view.registered.filter((item) => inside(item.createdAt))
+        .length,
+      sales: view.purchases
+        .filter((item) => inside(item.createdAt))
+        .reduce((sum, item) => sum + item.amountUSDT, 0),
+      redemptions: view.coupons.filter((item) => inside(item.issuedAt)).length,
+    };
+  });
+}

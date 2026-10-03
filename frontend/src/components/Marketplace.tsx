@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type CSSProperties } from "react";
 import {
   ArrowRight,
   ArrowUpRight,
@@ -106,6 +106,10 @@ export function BikeDetail({
   onReward: (brand: Brand) => void;
   onBuy: (bike: Bike) => void;
 }) {
+  const { allCompanies } = useCatalog();
+  const purchaseRule = allCompanies.find(
+    (company) => company.name === bike.brand,
+  )?.pointRules.Compra;
   return (
     <Modal title={`${bike.brand} ${bike.name}`} onClose={onClose} wide>
       <div className="product-detail">
@@ -137,9 +141,13 @@ export function BikeDetail({
             <Gift size={22} />
             <span>
               Tu próxima compra puede darte{" "}
-              <strong>1.000 puntos {bike.brand}</strong>.
+              <strong>
+                {fmt(purchaseRule?.points ?? 1000)} puntos {bike.brand}
+              </strong>
+              .
               <small>
-                Regla propuesta; requiere compra confirmada por la tienda.
+                Vencen en {purchaseRule?.expiryDays ?? 365} días; requiere
+                compra confirmada por la tienda.
               </small>
             </span>
           </div>
@@ -191,6 +199,7 @@ export default function Marketplace({
   const [style, setStyle] = useState("Todos");
   const [sort, setSort] = useState("featured");
   const [onlyFav, setOnlyFav] = useState(false);
+  const selectedCompany = filter === "Todas" ? undefined : brandInfo[filter];
   const visible = bikes
     .filter(
       (b) =>
@@ -342,6 +351,21 @@ export default function Marketplace({
             />
           </label>
         </div>
+        {selectedCompany && (
+          <div
+            className="brand-focus-banner"
+            style={{ "--brand-accent": selectedCompany.color } as CSSProperties}
+          >
+            <div>
+              <span className="eyebrow">CATÁLOGO OFICIAL DE MARCA</span>
+              <h2>{selectedCompany.subtitle}</h2>
+              <p>
+                Estás explorando exclusivamente motos, puntos y experiencias de {filter}.
+              </p>
+            </div>
+            <BrandLogo brand={filter} />
+          </div>
+        )}
         <div className="filter-row">
           <div className="filter-select">
             <SlidersHorizontal size={16} />

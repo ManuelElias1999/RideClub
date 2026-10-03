@@ -1,6 +1,7 @@
 import { ArrowRight, Check, Coins, Wallet } from "lucide-react";
 import type { Bike } from "../data/catalog";
 import type { Account, Purchase } from "../lib/demo";
+import { useCatalog } from "../data/CatalogContext";
 import { BrandLogo, fmt, Modal } from "./ui";
 export default function Checkout({
   bike,
@@ -19,6 +20,12 @@ export default function Checkout({
   onConfirm: () => void;
   onClub: () => void;
 }) {
+  const { allCompanies } = useCatalog();
+  const purchasePoints =
+    purchase?.points ??
+    allCompanies.find((company) => company.name === bike.brand)?.pointRules
+      .Compra.points ??
+    1000;
   return (
     <Modal
       title={
@@ -41,7 +48,7 @@ export default function Checkout({
         {purchase ? (
           <div className="purchase-success">
             <Check size={24} />
-            <strong>¡Ya tienes 1.000 puntos más!</strong>
+            <strong>¡Ya tienes {fmt(purchasePoints)} puntos más!</strong>
           </div>
         ) : (
           <p>Prueba el recorrido completo con tu saldo USDT de demostración.</p>
@@ -72,7 +79,7 @@ export default function Checkout({
               <Coins size={16} />{" "}
               {purchase ? "Puntos acreditados" : "Ganas con esta compra"}
             </dt>
-            <dd>+1.000 {bike.brand}</dd>
+            <dd>+{fmt(purchasePoints)} {bike.brand}</dd>
           </div>
           {purchase && (
             <div>

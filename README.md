@@ -48,6 +48,10 @@ npm run dev -- --host 127.0.0.1
 - **Administración global de RideClub**: métricas por empresa, clientes, compras, ventas USDT demo, motos vendidas, puntos canjeados, beneficios usados, wallets y exportación CSV por período.
 - Alta y gestión de empresas con correo asignado, estado pendiente/publicado/suspendido, identidad visual y permisos. Solo las empresas publicadas aparecen en la landing y pueden recibir registros.
 - **Dashboard independiente para cada empresa**: acceso con su correo (por ejemplo `zontes@gmail.com`), métricas y clientes limitados a su marca, gestión de motos, recompensas, precios, cupos, wallet y validación en taller.
+- CRUD administrativo de clientes con registro manual, edición, bloqueo y baja lógica que conserva el historial.
+- Reglas de puntos configurables por empresa para compras, referidos, mantenimientos y eventos, incluyendo vigencia y registro automático del vencimiento.
+- Tendencias de registros, ventas y canjes durante los últimos 14 días.
+- Contextos visuales diferenciados por empresa: color, logo, lema y banner propio en marketplace, recompensas y dashboard.
 - Marca visible y editable en Mi club. Las cuentas anteriores conservan su marca; si no tenían una, pueden vincularla desde el perfil sin perder saldos ni compras.
 - Prevención de duplicados de referencias por marca y de recompensas repetidas al mismo referido.
 - Diseño responsive, diálogos nativos, navegación por teclado y reducción de movimiento.
