@@ -22,13 +22,24 @@ export default function Rewards({
   const { brands, rewards, brandInfo } = useCatalog();
   const selectedCompany = filter === "Todas" ? undefined : brandInfo[filter];
   return (
-    <section className="page-section">
+    <section
+      className={`page-section rewards-page ${selectedCompany ? "brand-context-page" : ""}`}
+      style={
+        selectedCompany
+          ? ({ "--brand-accent": selectedCompany.color } as CSSProperties)
+          : undefined
+      }
+    >
       <div className="page-intro">
         <span className="eyebrow">BIENVENIDO AL LADO BUENO DE RODAR</span>
         <h1>
-          Tus puntos.
+          {selectedCompany ? `Tus puntos ${filter}.` : "Tus puntos."}
           <br />
-          <em>Tu próxima recompensa.</em>
+          <em>
+            {selectedCompany
+              ? selectedCompany.subtitle
+              : "Tu próxima recompensa."}
+          </em>
         </h1>
         <p>
           Cuida tu moto, completa tu equipo y vuelve al camino.
@@ -105,8 +116,11 @@ export default function Rewards({
               r.stock - coupons.filter((c) => c.rewardId === r.id).length;
             return (
               <article
-                className={`reward-card ${r.brand.toLowerCase()}`}
+                className={`reward-card brand-product-card ${r.brand.toLowerCase()}`}
                 key={r.id}
+                style={{
+                  "--brand-accent": brandInfo[r.brand]?.color ?? "#c6f46a",
+                } as CSSProperties}
               >
                 <div className={`reward-art ${r.image ? "with-photo" : ""}`}>
                   {r.image && (

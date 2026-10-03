@@ -42,19 +42,14 @@ export function assertCompanyAccess(
   return company;
 }
 export function manageBrand(state: Demo, brand: Brand): Company {
-  const current = actor(state);
-  if (current.role !== "company")
-    throw Error("Esta operación corresponde al equipo de la empresa.");
   const company = state.companies.find((c) => c.name === brand);
   if (!company) throw Error("La empresa no existe.");
   return assertCompanyAccess(state, company.id, true);
 }
 
 function companyOperator(state: Demo, companyId: string): Company {
-  if (actor(state).role !== "company")
-    throw Error(
-      "Esta configuración corresponde a la empresa. El administrador global solo puede consultarla.",
-    );
+  const current = actor(state);
+  if (current.role === "admin") return assertCompanyAccess(state, companyId, true);
   return assertCompanyAccess(state, companyId, true);
 }
 export function safeURL(value: string, image = false): string {
@@ -213,18 +208,22 @@ export function saveClient(
   accountId?: string,
 ): Demo {
   const current = actor(state);
-  if (current.role !== "company")
-    throw Error(
-      "La gestión de clientes corresponde a cada empresa. El administrador global solo puede consultarlos.",
-    );
-  const company = assertCompanyAccess(state, current.companyId!, true);
+  const company =
+    current.role === "admin"
+      ? state.companies.find((item) => item.name === draft.brand)
+      : assertCompanyAccess(state, current.companyId!, true);
+  if (!company) throw Error("Selecciona una empresa válida para el perfil.");
   const existing = accountId
     ? state.accounts.find(
         (account) => account.id === accountId && account.role === "client",
       )
     : undefined;
   if (accountId && !existing) throw Error("El cliente ya no existe.");
-  if (existing && existing.brand !== company.name)
+  if (
+    current.role === "company" &&
+    existing &&
+    existing.brand !== company.name
+  )
     throw Error("Solo puedes editar clientes registrados en tu empresa.");
   const name = text(draft.name, "el nombre del cliente", 2, 80);
   const email = draft.email.trim().toLowerCase();
@@ -238,7 +237,7 @@ export function saveClient(
     email === "admin@rideclub.demo"
   )
     throw Error("Este correo ya está asociado a otra cuenta.");
-  if (draft.brand !== company.name)
+  if (current.role === "company" && draft.brand !== company.name)
     throw Error("El cliente debe quedar vinculado a tu empresa.");
   const phone = draft.phone?.trim();
   if (phone && !/^\+[1-9]\d{7,14}$/.test(phone))
@@ -278,7 +277,9 @@ export function saveClient(
       ? draft.status === "deleted"
         ? "Cliente dado de baja"
         : "Cliente actualizado"
-      : "Cliente registrado por la empresa",
+      : current.role === "admin"
+        ? "Cliente registrado por administración"
+        : "Cliente registrado por la empresa",
     account.id,
   );
 }
@@ -311,6 +312,11 @@ export function savePointRules(
       ...state,
       companies: state.companies.map((item) =>
         item.id === company.id ? { ...item, pointRules: normalized } : item,
+      ),
+      catalogRewards: state.catalogRewards.map((reward) =>
+        reward.brand === company.name && reward.kind === "service"
+          ? { ...reward, points: normalized.Mantenimiento.points }
+          : reward,
       ),
     },
     company.id,
@@ -415,12 +421,40 @@ export function saveReward(
     image: safeURL(draft.image ?? "", true),
     archived: existing?.archived ?? false,
   };
+  const updatedRewards = existing
+    ? state.catalogRewards.map((item) =>
+        item.id === reward.id ? reward : item,
+      )
+    : [...state.catalogRewards, reward];
+  const catalogRewards =
+    reward.kind === "service"
+      ? updatedRewards.map((item) =>
+          item.brand === company.name && item.kind === "service"
+            ? { ...item, points: reward.points }
+            : item,
+        )
+      : updatedRewards;
   return audit(
     {
       ...state,
-      catalogRewards: existing
-        ? state.catalogRewards.map((r) => (r.id === reward.id ? reward : r))
-        : [...state.catalogRewards, reward],
+      catalogRewards,
+      companies:
+        reward.kind === "service"
+          ? state.companies.map((item) =>
+              item.id === company.id
+                ? {
+                    ...item,
+                    pointRules: {
+                      ...item.pointRules,
+                      Mantenimiento: {
+                        ...item.pointRules.Mantenimiento,
+                        points: reward.points,
+                      },
+                    },
+                  }
+                : item,
+            )
+          : state.companies,
     },
     company.id,
     existing ? "Recompensa editada" : "Recompensa creada",

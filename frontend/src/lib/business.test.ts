@@ -13,6 +13,7 @@ import {
   saveClient,
   saveCompany,
   savePointRules,
+  saveReward,
 } from "./business";
 
 describe("RideClub business dashboards", () => {
@@ -134,21 +135,35 @@ describe("RideClub business dashboards", () => {
     expect(() => login(state, "cliente@demo.com")).toThrow("bloqueada");
   });
 
-  it("keeps the global administrator read-only for client and loyalty operations", () => {
-    const state = enterAdminDemo(initialDemo());
+  it("lets the global administrator manage clients and loyalty for every company", () => {
+    let state = enterAdminDemo(initialDemo());
     const zontes = state.companies.find((company) => company.name === "Zontes")!;
-    expect(() =>
-      saveClient(state, {
-        name: "Cliente prueba",
-        email: "cliente@demo.com",
-        phone: "+59170000001",
-        brand: "Zontes",
-        status: "active",
-      }),
-    ).toThrow("corresponde a cada empresa");
-    expect(() => savePointRules(state, zontes.id, zontes.pointRules)).toThrow(
-      "corresponde a la empresa",
-    );
+    state = saveClient(state, {
+      name: "Cliente prueba",
+      email: "cliente@demo.com",
+      phone: "+59170000001",
+      brand: "Zontes",
+      status: "active",
+    });
+    expect(state.accounts.some((account) => account.email === "cliente@demo.com")).toBe(true);
+    state = savePointRules(state, zontes.id, {
+      ...zontes.pointRules,
+      Evento: { points: 90, expiryDays: 180 },
+    });
+    expect(state.companies.find((company) => company.id === zontes.id)?.pointRules.Evento.points).toBe(90);
+  });
+
+  it("keeps the maintenance rule and published service reward synchronized", () => {
+    let state = login(initialDemo(), "zontes@gmail.com");
+    const zontes = state.companies.find((company) => company.name === "Zontes")!;
+    state = savePointRules(state, zontes.id, {
+      ...zontes.pointRules,
+      Mantenimiento: { points: 900, expiryDays: 365 },
+    });
+    expect(state.catalogRewards.find((reward) => reward.id === "Zontes-service")?.points).toBe(900);
+    const service = state.catalogRewards.find((reward) => reward.id === "Zontes-service")!;
+    state = saveReward(state, zontes.id, { ...service, points: 700 }, service.id);
+    expect(state.companies.find((company) => company.id === zontes.id)?.pointRules.Mantenimiento.points).toBe(700);
   });
 
   it("prevents a company from changing clients registered under another brand", () => {

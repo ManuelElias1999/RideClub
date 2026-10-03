@@ -5,10 +5,10 @@ Fecha: 3 de octubre de 2026. Actualización de registro, compras y tarjeta de be
 ## Comprobaciones de código
 
 - `npm run build`: TypeScript y compilación Vite completadas.
-- `npm test`: veintiuna pruebas Vitest completadas.
+- `npm test`: veintidós pruebas Vitest completadas.
 - `git diff --check`: sin errores de espacios.
 
-Las pruebas cubren canje y consumo de un solo uso, saldo por marca, vigencia, consentimiento, cupos, registro y referido, teléfonos regionales, compras con descuento USDT y puntos atómicos, saldo insuficiente, modelos sin precio, reintentos idempotentes, recargas y migración de cuentas anteriores. También validan marcas, actualización del perfil sin pérdida de saldo, roles cliente/administrador/empresa, aislamiento entre empresas, administrador global de consulta, CRUD empresarial de clientes, inicio de sesión de una cuenta creada y persistida, bloqueo de acceso, reglas de puntos por empresa y vencimiento trazable. Comprueban que no se repone saldo gastado al recargar y que un referido no se premia dos veces, incluso entre marcas o después de una confirmación manual del taller.
+Las pruebas cubren canje y consumo de un solo uso, saldo por marca, vigencia, consentimiento, cupos, registro y referido, teléfonos regionales, compras con descuento USDT y puntos atómicos, saldo insuficiente, modelos sin precio, reintentos idempotentes, recargas y migración de cuentas anteriores. También validan marcas, actualización del perfil sin pérdida de saldo, roles cliente/administrador/empresa, aislamiento entre empresas, control global del administrador, CRUD empresarial de clientes, inicio de sesión de una cuenta creada y persistida, bloqueo de acceso, sincronización entre mantenimiento y recompensa, reglas de puntos por empresa y vencimiento trazable. Comprueban que no se repone saldo gastado al recargar y que un referido no se premia dos veces, incluso entre marcas o después de una confirmación manual del taller.
 
 ## Recorrido real de navegador
 

@@ -26,9 +26,17 @@ export function BikeCard({
   onFavorite: () => void;
   onOpen: () => void;
 }) {
+  const { brandInfo } = useCatalog();
+  const identity = brandInfo[bike.brand];
   return (
-    <article className="bike-card">
+    <article
+      className="bike-card brand-product-card"
+      style={{ "--brand-accent": identity?.color ?? "#c6f46a" } as CSSProperties}
+    >
       <div className="bike-image">
+        <span className="card-brand-signature">
+          <BrandLogo brand={bike.brand} />
+        </span>
         <span
           className={`category-tag ${bike.brand === "NIU" ? "electric" : ""}`}
         >
@@ -194,12 +202,15 @@ export default function Marketplace({
   onJoin: () => void;
 }) {
   const { bikes, brands, brandInfo } = useCatalog();
-  const featured = bikes.find((b) => b.id === "z703f") ?? bikes[0];
   const [search, setSearch] = useState("");
   const [style, setStyle] = useState("Todos");
   const [sort, setSort] = useState("featured");
   const [onlyFav, setOnlyFav] = useState(false);
   const selectedCompany = filter === "Todas" ? undefined : brandInfo[filter];
+  const featured =
+    (filter !== "Todas" && bikes.find((bike) => bike.brand === filter)) ||
+    bikes.find((bike) => bike.id === "z703f") ||
+    bikes[0];
   const visible = bikes
     .filter(
       (b) =>
@@ -218,19 +229,45 @@ export default function Marketplace({
           : 0,
     );
   return (
-    <>
-      <section className="hero">
+    <div
+      className={`marketplace-page ${selectedCompany ? "brand-context-page" : ""}`}
+      style={
+        selectedCompany
+          ? ({ "--brand-accent": selectedCompany.color } as CSSProperties)
+          : undefined
+      }
+    >
+      <section
+        className={`hero ${selectedCompany ? "brand-hero" : ""}`}
+        style={
+          selectedCompany
+            ? ({ "--brand-accent": selectedCompany.color } as CSSProperties)
+            : undefined
+        }
+      >
         <div className="hero-copy">
+          {selectedCompany && (
+            <div className="hero-brand-identity">
+              <BrandLogo brand={filter} />
+              <span>MARKETPLACE OFICIAL DE {filter.toUpperCase()}</span>
+            </div>
+          )}
           <div className="hero-label">
             <span /> EL CLUB DE LOS QUE SIGUEN RODANDO
           </div>
           <h1>
-            Tu próxima ruta.
+            {selectedCompany ? filter : "Tu próxima ruta."}
             <br />
-            <em>Más recompensas.</em>
+            <em>
+              {selectedCompany
+                ? selectedCompany.subtitle
+                : "Más recompensas."}
+            </em>
           </h1>
           <p>
-            Encuentra tu moto. Vive la experiencia.
+            {selectedCompany
+              ? `Explora las motos, puntos y beneficios de ${filter}.`
+              : "Encuentra tu moto. Vive la experiencia."}
             <br />
             Convierte cada compra en algo que te lleve más lejos.
           </p>
@@ -481,6 +518,6 @@ export default function Marketplace({
         <span>Tu experiencia, en un solo lugar.</span>
         <span>Motos. Comunidad. Recompensas.</span>
       </section>
-    </>
+    </div>
   );
 }

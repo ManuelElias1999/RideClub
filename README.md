@@ -36,6 +36,7 @@ npm run dev -- --host 127.0.0.1
 ## Esta entrega
 
 - Marketplace de nueve modelos reales: **703F, GK350, GK200**; **NQi Sport MY26, NQiX 300 MY26, NQiX 500 MY26**; **KD150-Z, KD250-V, KD150-GK**.
+- Portada independiente con explicación del producto, funcionamiento, empresas, ofertas destacadas y accesos a las cuatro secciones principales: Inicio, Marketplace, Recompensas y cuenta/dashboard.
 - Fotografías y logos de las marcas, tipografía local, filtros por marca/estilo, búsqueda, orden por precio/nombre y favoritas.
 - Fichas con características, fuente y precios publicados en USDT cuando existen. Compra simulada con saldo USDT ficticio para Zontes y NIU; Kiden requiere cotización. Las consultas comerciales llevan al sitio de origen; no se procesan pagos reales.
 - Registro local por nombre, correo, **marca vinculada (Zontes / NIU / Kiden)**, **celular con región y prefijo (+591 por defecto)** y **número de referido opcional**; ingreso por correo para cuentas del mismo navegador.
@@ -48,8 +49,9 @@ npm run dev -- --host 127.0.0.1
 - **Administración global de RideClub**: métricas por empresa, clientes, compras, ventas USDT demo, motos vendidas, puntos canjeados, beneficios usados, wallets y exportación CSV por período.
 - Alta y gestión de empresas con correo asignado, estado pendiente/publicado/suspendido, identidad visual y permisos. Solo las empresas publicadas aparecen en la landing y pueden recibir registros.
 - **Dashboard independiente para cada empresa**: acceso con su correo (por ejemplo `zontes@gmail.com`), métricas y clientes limitados a su marca, gestión de motos, recompensas, precios, cupos, wallet y validación en taller.
-- CRUD de clientes a cargo de cada empresa, con registro manual, edición, bloqueo temporal y baja lógica que conserva el historial. El administrador global solo los consulta.
+- CRUD de clientes por empresa, con registro manual, edición, bloqueo temporal y baja lógica que conserva el historial. El administrador global mantiene control total y puede operar clientes de cualquier marca.
 - Reglas de puntos configurables por empresa para compras, referidos, mantenimientos y eventos, incluyendo vigencia y registro automático del vencimiento.
+- Valor de mantenimiento sincronizado en ambos sentidos con el costo del beneficio de servicio publicado en la landing.
 - Tendencias de registros, ventas y canjes durante los últimos 14 días.
 - Contextos visuales diferenciados por empresa: color, logo, lema y banner propio en marketplace, recompensas y dashboard.
 - Marca visible y editable en Mi club. Las cuentas anteriores conservan su marca; si no tenían una, pueden vincularla desde el perfil sin perder saldos ni compras.
@@ -86,7 +88,7 @@ La opción **Sobre la demo y sus fuentes → Reiniciar datos de esta demo** rest
 4. Cierra sesión e ingresa con `zontes@gmail.com`, `niu@gmail.com` o `kiden@gmail.com`. Cada correo abre únicamente el dashboard y los datos de esa empresa.
 5. Desde el dashboard empresarial se pueden registrar, editar, bloquear o dar de baja clientes; agregar, editar o retirar motos y recompensas; configurar puntos ganados, costos de canje, precios, cupos y una dirección EVM de demo. Los cambios publicados se reflejan en la landing.
 
-Los roles y datos siguen siendo locales en esta etapa. No existe contraseña ni sincronización real entre navegadores hasta implementar el backend.
+Los roles y datos siguen siendo locales en esta etapa. No existe contraseña ni sincronización real entre navegadores hasta implementar el backend. Una ventana normal y una ventana de incógnito usan almacenamientos diferentes, por lo que las cuentas deben probarse en el mismo perfil del navegador donde fueron creadas.
 
 ## Estado de backend y blockchain
 

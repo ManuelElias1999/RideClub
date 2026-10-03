@@ -254,7 +254,7 @@ export function login(state: Demo, email: string): Demo {
   );
   if (!a)
     throw Error(
-      "No encontramos este correo en el navegador. Crea una cuenta de demo.",
+      "No encontramos este correo en este perfil del navegador. Si lo creaste en una ventana normal, no aparecerá en incógnito; ingresa desde el mismo perfil o crea otra cuenta de demo aquí.",
     );
   if (a.status === "blocked")
     throw Error("Esta cuenta está bloqueada. Contacta al administrador.");
@@ -508,7 +508,10 @@ export function loadDemo(): Demo {
     const raw = localStorage.getItem(storageKey);
     if (raw) {
       const s = JSON.parse(raw);
-      const companies: Company[] = Array.isArray(s.companies)
+      const catalogRewards: Reward[] = Array.isArray(s.catalogRewards)
+        ? s.catalogRewards
+        : structuredClone(rewards);
+      const companies: Company[] = (Array.isArray(s.companies)
         ? s.companies.map((company: Company) => ({
             ...company,
             pointRules: {
@@ -516,7 +519,25 @@ export function loadDemo(): Demo {
               ...(company.pointRules ?? {}),
             },
           }))
-        : initialCompanies();
+        : initialCompanies()
+      ).map((company: Company) => {
+        const maintenance = catalogRewards.find(
+          (reward) =>
+            reward.brand === company.name && reward.kind === "service",
+        );
+        return maintenance
+          ? {
+              ...company,
+              pointRules: {
+                ...company.pointRules,
+                Mantenimiento: {
+                  ...company.pointRules.Mantenimiento,
+                  points: maintenance.points,
+                },
+              },
+            }
+          : company;
+      });
       if (
         s.version === 1 &&
         Array.isArray(s.accounts) &&
@@ -563,9 +584,7 @@ export function loadDemo(): Demo {
             ? s.catalogBikes
             : structuredClone(bikes),
           audit: Array.isArray(s.audit) ? s.audit : [],
-          catalogRewards: Array.isArray(s.catalogRewards)
-            ? s.catalogRewards
-            : structuredClone(rewards),
+          catalogRewards,
         });
       }
     }

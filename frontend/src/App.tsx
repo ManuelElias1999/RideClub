@@ -45,18 +45,26 @@ import Club, { CouponDialog } from "./components/Club";
 import Checkout from "./components/Checkout";
 import Auth from "./components/Auth";
 import Workshop from "./components/Workshop";
+import Landing from "./components/Landing";
 import { BrandLogo, Modal } from "./components/ui";
 type Page =
-  "marketplace" | "recompensas" | "club" | "taller" | "admin" | "empresa";
+  | "inicio"
+  | "marketplace"
+  | "recompensas"
+  | "club"
+  | "taller"
+  | "admin"
+  | "empresa";
 const getPage = (): Page => {
   const h = window.location.hash.slice(1);
-  return ["recompensas", "club", "taller", "admin", "empresa"].includes(h)
+  return ["inicio", "marketplace", "recompensas", "club", "taller", "admin", "empresa"].includes(h)
     ? (h as Page)
-    : "marketplace";
+    : "inicio";
 };
 export default function App() {
   const [state, setState] = useState<Demo>(loadDemo);
   const stateRef = useRef(state);
+  const storageSync = useRef(false);
   stateRef.current = state;
   const [page, setPage] = useState<Page>(getPage);
   const [filter, setFilter] = useState<Brand | "Todas">("Todas");
@@ -97,6 +105,10 @@ export default function App() {
     }
   };
   useEffect(() => {
+    if (storageSync.current) {
+      storageSync.current = false;
+      return;
+    }
     try {
       localStorage.setItem(storageKey, JSON.stringify(state));
     } catch {
@@ -105,6 +117,21 @@ export default function App() {
       );
     }
   }, [state]);
+  useEffect(() => {
+    const sync = (event: StorageEvent) => {
+      if (event.key !== storageKey || !event.newValue) return;
+      const incoming = loadDemo();
+      const currentId = incoming.accounts.some(
+        (item) => item.id === stateRef.current.currentId,
+      )
+        ? stateRef.current.currentId
+        : null;
+      storageSync.current = true;
+      commit({ ...incoming, currentId });
+    };
+    window.addEventListener("storage", sync);
+    return () => window.removeEventListener("storage", sync);
+  }, []);
   useEffect(() => {
     const current = state.accounts.find((item) => item.id === state.currentId);
     if (
@@ -118,7 +145,7 @@ export default function App() {
           ? "Tu cuenta está bloqueada temporalmente. Contacta a la empresa."
           : "Tu cuenta fue dada de baja y ya no puede iniciar sesión.",
       );
-      navigate("marketplace");
+      navigate("inicio");
     }
   }, [state.currentId, state.accounts]);
   useEffect(() => {
@@ -143,7 +170,7 @@ export default function App() {
   useEffect(() => {
     if (window.location.hash !== "#catalogo")
       window.scrollTo({ top: 0, behavior: "instant" });
-    document.title = `RideClub — ${page === "marketplace" ? "Tu próxima ruta empieza aquí" : page === "club" ? "Mi club" : page === "taller" ? "Taller demo" : "Recompensas"}`;
+    document.title = `RideClub — ${page === "inicio" ? "Motos, puntos y beneficios" : page === "marketplace" ? "Marketplace" : page === "club" ? "Mi club" : page === "taller" ? "Taller demo" : page === "recompensas" ? "Recompensas" : "Administración"}`;
   }, [page]);
   const staff = account?.role === "admin" || account?.role === "company";
   const dashboardPage: Page = account?.role === "company" ? "empresa" : "admin";
@@ -159,7 +186,7 @@ export default function App() {
     },
     onLogout: () => {
       commit({ ...stateRef.current, currentId: null });
-      navigate("marketplace");
+      navigate("inicio");
     },
     onWorkshop: () => navigate("taller"),
   };
@@ -187,7 +214,7 @@ export default function App() {
   }, [state.companies, filter]);
   function navigate(p: Page) {
     setPage(p);
-    window.location.hash = p === "marketplace" ? "marketplace" : p;
+    window.location.hash = p;
     setMenu(false);
     window.scrollTo({ top: 0, behavior: "instant" });
   }
@@ -318,8 +345,8 @@ export default function App() {
       <header className="site-header">
         <a
           className="wordmark"
-          href="#marketplace"
-          onClick={() => navigate("marketplace")}
+          href="#inicio"
+          onClick={() => navigate("inicio")}
           aria-label="RideClub inicio"
         >
           <span className="brand-symbol">
@@ -330,6 +357,7 @@ export default function App() {
         </a>
         <nav className={menu ? "open" : ""} aria-label="Navegación principal">
           {[
+            ["inicio", "Inicio"],
             ["marketplace", "Marketplace"],
             ["recompensas", "Recompensas"],
             ...(!staff
@@ -350,12 +378,6 @@ export default function App() {
               {page === p && <span />}
             </button>
           ))}
-          <button
-            className={`admin-nav ${page === "taller" ? "active" : ""}`}
-            onClick={() => navigate("taller")}
-          >
-            <Wrench size={14} /> Taller demo
-          </button>
         </nav>
         <div className="header-actions">
           <button
@@ -383,6 +405,27 @@ export default function App() {
         </div>
       </header>
       <main id="main">
+        {page === "inicio" && (
+          <Landing
+            onMarketplace={() => {
+              setFilter("Todas");
+              navigate("marketplace");
+            }}
+            onRewards={() => {
+              setFilter("Todas");
+              navigate("recompensas");
+            }}
+            onJoin={() =>
+              account
+                ? navigate(staff ? dashboardPage : "club")
+                : openAuth("register")
+            }
+            onBrand={(selectedBrand, destination) => {
+              setFilter(selectedBrand);
+              navigate(destination === "marketplace" ? "marketplace" : "recompensas");
+            }}
+          />
+        )}
         {page === "marketplace" && (
           <Marketplace
             filter={filter}
@@ -482,7 +525,7 @@ export default function App() {
             </section>
           ))}
         {page === "taller" &&
-          (account?.role === "company" ? (
+          (staff ? (
             <Workshop
               key={workshopCode}
               state={workshopState}
@@ -515,17 +558,17 @@ export default function App() {
           ) : (
             <section className="page-section admin-access">
               <Wrench size={35} />
-              <span className="eyebrow">ACCESO DE EMPRESA</span>
-              <h1>Gestiona la operación de tu marca.</h1>
+              <span className="eyebrow">ACCESO OPERATIVO</span>
+              <h1>Gestiona la operación del club.</h1>
               <p>
                 La validación de beneficios y la acreditación de puntos
-                corresponden a cada empresa.
+                corresponden a empresas y administradores autorizados.
               </p>
               <button
                 className="button primary"
                 onClick={() => openAuth("login")}
               >
-                Iniciar sesión de empresa <ChevronRight size={18} />
+                Iniciar sesión <ChevronRight size={18} />
               </button>
               <p className="fine-print">
                 Cambiarás a una cuenta de prueba con rol administrador. Tus

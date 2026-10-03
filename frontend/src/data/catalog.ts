@@ -273,7 +273,7 @@ export const rewards: Reward[] = brands.flatMap((brand) => [
 ]);
 export const pointsRules = {
   Compra: 1000,
-  Mantenimiento: 100,
+  Mantenimiento: 500,
   Referido: 200,
   Evento: 50,
 } as const;

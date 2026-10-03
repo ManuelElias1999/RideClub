@@ -281,8 +281,10 @@ export default function Auth({
           <div className="auth-footnote">
             <ShieldCheck size={16} />
             <span>
-              Frontend de demo. No verifica el correo ni crea una sesión segura.
-              Usa un correo de prueba.
+              Frontend de demo: los datos existen solo en este perfil del
+              navegador. Una ventana normal y una ventana de incógnito no
+              comparten cuentas. No verifica el correo ni crea una sesión
+              segura.
             </span>
           </div>
         </>
