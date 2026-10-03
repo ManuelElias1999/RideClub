@@ -79,7 +79,7 @@ const tabs = [
   ["overview", "Resumen", BarChart3],
   ["companies", "Empresas", Building2],
   ["clients", "Clientes", Users],
-  ["rules", "Reglas de puntos", Settings2],
+  ["rules", "Puntos y canjes", Settings2],
   ["purchases", "Compras", ShoppingBag],
   ["bikes", "Motos", BikeIcon],
   ["rewards", "Recompensas", Gift],
@@ -87,6 +87,12 @@ const tabs = [
   ["wallets", "Wallets", Wallet],
   ["activity", "Actividad", Activity],
 ] as const;
+const pointRuleLabels: Record<keyof PointRuleSet, string> = {
+  Compra: "Compra de moto (automática)",
+  Mantenimiento: "Mantenimiento realizado",
+  Referido: "Referido confirmado",
+  Evento: "Asistencia a evento",
+};
 export default function Dashboard({
   state,
   onMutation,
@@ -356,9 +362,11 @@ export default function Dashboard({
                 </button>
               ))}
           </nav>
-          <button className="business-workshop" onClick={onWorkshop}>
-            <Wrench size={17} /> Validación en taller <ArrowUpRight size={15} />
-          </button>
+          {!global && (
+            <button className="business-workshop" onClick={onWorkshop}>
+              <Wrench size={17} /> Operación y taller <ArrowUpRight size={15} />
+            </button>
+          )}
           <div className="business-session">
             <span>{current.email}</span>
             <small>
@@ -722,8 +730,12 @@ export default function Dashboard({
           )}
           {tab === "clients" && (
             <Panel
-              title="Tus clientes"
-              subtitle="Incluye perfiles registrados y personas que compraron o canjearon en el ámbito seleccionado."
+              title={global ? "Clientes de la plataforma" : "Tus clientes"}
+              subtitle={
+                global
+                  ? "Vista global de consulta. Cada empresa registra, edita, bloquea o da de baja a sus propios clientes."
+                  : "Administra los perfiles registrados en tu empresa y consulta quienes compraron o canjearon contigo."
+              }
               action={
                 <div className="panel-actions">
                   <SearchBox
@@ -731,9 +743,10 @@ export default function Dashboard({
                     onChange={setSearch}
                     label="Buscar clientes"
                   />
-                  {global && (
+                  {!global && (
                     <button
                       className="button primary small"
+                      disabled={!writable}
                       onClick={() => setEditor({ kind: "client" })}
                     >
                       <UserPlus size={16} /> Registrar cliente
@@ -794,9 +807,10 @@ export default function Dashboard({
                           >
                             Ver cliente <ArrowUpRight size={15} />
                           </button>
-                          {global && (
+                          {!global && a.brand === own?.name && (
                             <button
                               className="text-link"
+                              disabled={!writable}
                               onClick={() =>
                                 setEditor({ kind: "client", item: a })
                               }
@@ -807,8 +821,19 @@ export default function Dashboard({
                         </td>
                       </tr>
                     );
-                  })}
+                })}
               </Table>
+              {!global && (
+                <div className="status-explanation">
+                  <ShieldCheck size={20} />
+                  <span>
+                    <strong>Bloqueada:</strong> suspensión temporal; no puede
+                    iniciar sesión y puedes reactivarla. <strong>Dada de baja:</strong>{" "}
+                    sale de la operación habitual y tampoco puede ingresar, pero
+                    sus compras, canjes y auditoría se conservan.
+                  </span>
+                </div>
+              )}
               {view.clients.length === 0 && (
                 <BusinessEmpty text="Aún no hay clientes en esta empresa. Los registros y compradores aparecerán aquí." />
               )}
@@ -816,8 +841,12 @@ export default function Dashboard({
           )}
           {tab === "rules" && (
             <Panel
-              title="Reglas de puntuación"
-              subtitle="Cada empresa define cuánto entrega por actividad y cuándo vencen esos puntos."
+              title="Puntos ganados y costos de canje"
+              subtitle={
+                global
+                  ? "Consulta la configuración de cada marca. Solo la empresa puede modificarla."
+                  : "Configura por separado cuánto gana el cliente y cuánto cuesta cada beneficio; ambos cambios se reflejan en la experiencia pública."
+              }
             >
               <div className="points-rules-grid">
                 {selectedCompanies.map((company) => (
@@ -833,22 +862,60 @@ export default function Dashboard({
                       {Object.entries(company.pointRules).map(
                         ([kind, rule]) => (
                           <div key={kind}>
-                            <span>{kind}</span>
+                            <span>
+                              {pointRuleLabels[kind as keyof PointRuleSet]}
+                            </span>
                             <strong>{fmt(rule.points)} puntos</strong>
                             <small>Vencen en {rule.expiryDays} días</small>
                           </div>
                         ),
                       )}
                     </div>
-                    <button
-                      className="button secondary small"
-                      disabled={!writable}
-                      onClick={() => setEditor({ kind: "rules", item: company })}
-                    >
-                      <Settings2 size={15} /> Configurar reglas
-                    </button>
+                    {!global && (
+                      <button
+                        className="button secondary small"
+                        disabled={!writable}
+                        onClick={() =>
+                          setEditor({ kind: "rules", item: company })
+                        }
+                      >
+                        <Settings2 size={15} /> Configurar puntos ganados
+                      </button>
+                    )}
                   </article>
                 ))}
+              </div>
+              <div className="redemption-costs-heading">
+                <div>
+                  <h3>Costos de los beneficios publicados</h3>
+                  <p>
+                    Este es el valor que aparece en la landing de recompensas.
+                    Por ejemplo, cambia aquí el costo de un mantenimiento de 500
+                    a 1.000 puntos.
+                  </p>
+                </div>
+              </div>
+              <div className="redemption-costs-grid">
+                {view.rewards
+                  .filter((reward) => !reward.archived)
+                  .map((reward) => (
+                    <article key={reward.id}>
+                      <span>{reward.brand}</span>
+                      <strong>{reward.title}</strong>
+                      <b>{fmt(reward.points)} puntos</b>
+                      {!global && (
+                        <button
+                          className="text-link"
+                          disabled={!writable}
+                          onClick={() =>
+                            setEditor({ kind: "reward", item: reward })
+                          }
+                        >
+                          <Pencil size={14} /> Editar costo
+                        </button>
+                      )}
+                    </article>
+                  ))}
               </div>
               <div className="expiry-explanation">
                 <CalendarClock size={21} />
@@ -896,16 +963,20 @@ export default function Dashboard({
               }
               subtitle="Los cambios se reflejan en el marketplace y las recompensas publicadas."
               action={
-                <button
-                  className="button primary small"
-                  disabled={!writable || !companies.length}
-                  onClick={() =>
-                    setEditor({ kind: tab === "bikes" ? "bike" : "reward" })
-                  }
-                >
-                  <Plus size={16} />
-                  {tab === "bikes" ? "Agregar moto" : "Agregar recompensa"}
-                </button>
+                !global ? (
+                  <button
+                    className="button primary small"
+                    disabled={!writable || !companies.length}
+                    onClick={() =>
+                      setEditor({
+                        kind: tab === "bikes" ? "bike" : "reward",
+                      })
+                    }
+                  >
+                    <Plus size={16} />
+                    {tab === "bikes" ? "Agregar moto" : "Agregar recompensa"}
+                  </button>
+                ) : undefined
               }
             >
               <div className="catalog-management-filters">
@@ -966,7 +1037,7 @@ export default function Dashboard({
                           </strong>
                           <div className="row-actions">
                             <button
-                              disabled={!writable}
+                              disabled={!writable || global}
                               aria-label={`Editar ${motorcycle ? "moto" : "recompensa"} ${label}`}
                               onClick={() =>
                                 setEditor(
@@ -977,11 +1048,11 @@ export default function Dashboard({
                               }
                             >
                               <Pencil size={15} />
-                              Editar
+                              {global ? "Solo consulta" : "Editar"}
                             </button>
                             {item.archived ? (
                               <button
-                                disabled={!writable}
+                                disabled={!writable || global}
                                 onClick={() =>
                                   restore(
                                     motorcycle ? "bike" : "reward",
@@ -994,7 +1065,7 @@ export default function Dashboard({
                               </button>
                             ) : (
                               <button
-                                disabled={!writable}
+                                disabled={!writable || global}
                                 aria-label={`Eliminar ${motorcycle ? "moto" : "recompensa"} ${label}`}
                                 onClick={() =>
                                   setEditor({
@@ -1080,7 +1151,7 @@ export default function Dashboard({
                       </p>
                       <button
                         className="button secondary small"
-                        disabled={!writable}
+                        disabled={!writable || global}
                         onClick={() => setEditor({ kind: "wallet", item: c })}
                       >
                         <Pencil size={15} />
@@ -1192,7 +1263,7 @@ export default function Dashboard({
       {editor?.kind === "client" && (
         <ClientEditor
           item={editor.item}
-          companies={state.companies}
+          companies={own ? [own] : []}
           onClose={() => setEditor(undefined)}
           onSave={(draft) =>
             mutate((s) => saveClient(s, draft, editor.item?.id))
@@ -1675,20 +1746,21 @@ function ClientEditor({
         </label>
         <label>
           Empresa vinculada
-          <select required value={form.brand ?? ""} onChange={(event) => setForm({ ...form, brand: event.target.value })}>
-            {companies.map((company) => (
-              <option key={company.id} value={company.name}>{company.name}</option>
-            ))}
-          </select>
+          <input value={form.brand ?? ""} readOnly aria-readonly="true" />
+          <small>La empresa se asigna automáticamente desde tu sesión.</small>
         </label>
         <label>
           Estado de la cuenta
           <select value={form.status} onChange={(event) => setForm({ ...form, status: event.target.value as ClientDraft["status"] })}>
             <option value="active">Activa</option>
-            <option value="blocked">Bloqueada</option>
+            <option value="blocked">Bloqueada temporalmente</option>
             <option value="deleted">Dada de baja</option>
           </select>
-          <small>La baja es lógica: conserva compras, canjes y auditoría.</small>
+          <small>
+            Bloquear impide el acceso hasta reactivar la cuenta. Dar de baja la
+            retira de la operación habitual, pero conserva compras, canjes y
+            auditoría.
+          </small>
         </label>
         {error && <p className="form-error" role="alert">{error}</p>}
         <button className="button primary full" type="submit">
@@ -1721,7 +1793,7 @@ function PointRulesEditor({
         <div className="rule-editor-grid">
           {Object.entries(rules).map(([kind, rule]) => (
             <fieldset key={kind}>
-              <legend>{kind}</legend>
+              <legend>{pointRuleLabels[kind as keyof PointRuleSet]}</legend>
               <label>
                 Puntos entregados
                 <input
@@ -1750,7 +1822,10 @@ function PointRulesEditor({
           ))}
         </div>
         <p className="fine-print">
-          Las reglas se aplican a nuevas acreditaciones. Los puntos ya entregados conservan su fecha original.
+          Estos valores indican puntos que el cliente gana. No son el costo de
+          los beneficios: ese valor se edita en “Costos de los beneficios”. Las
+          reglas se aplican a nuevas acreditaciones y los puntos ya entregados
+          conservan su fecha original.
         </p>
         {error && <p className="form-error" role="alert">{error}</p>}
         <button className="button primary full" type="submit">Guardar reglas</button>

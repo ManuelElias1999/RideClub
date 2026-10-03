@@ -44,11 +44,11 @@ npm run dev -- --host 127.0.0.1
 - “Mi club”: saldo USDT de prueba, puntos separados por marca, compras con comprobante, beneficios disponibles/usados/vencidos, favoritas, referidos y actividad.
 - Nueve **recompensas propuestas**: mantenimiento o diagnóstico eléctrico, descuento en repuestos/accesorios y limpieza/revisión visual.
 - Canje local por tarjeta visual de beneficio con foto de mantenimiento, estado, vigencia y QR desplegable. El beneficio se valida una sola vez; se conserva en el historial sin descontar puntos nuevamente.
-- Roles de demo **cliente / administrador**: el registro crea clientes; el acceso **Entrar como administrador demo** permite acreditar actividades, validar cupones y exportar CSV.
+- Roles de demo **cliente / empresa / administrador**: el registro crea clientes; cada empresa opera su marca y el administrador global supervisa la plataforma.
 - **Administración global de RideClub**: métricas por empresa, clientes, compras, ventas USDT demo, motos vendidas, puntos canjeados, beneficios usados, wallets y exportación CSV por período.
 - Alta y gestión de empresas con correo asignado, estado pendiente/publicado/suspendido, identidad visual y permisos. Solo las empresas publicadas aparecen en la landing y pueden recibir registros.
 - **Dashboard independiente para cada empresa**: acceso con su correo (por ejemplo `zontes@gmail.com`), métricas y clientes limitados a su marca, gestión de motos, recompensas, precios, cupos, wallet y validación en taller.
-- CRUD administrativo de clientes con registro manual, edición, bloqueo y baja lógica que conserva el historial.
+- CRUD de clientes a cargo de cada empresa, con registro manual, edición, bloqueo temporal y baja lógica que conserva el historial. El administrador global solo los consulta.
 - Reglas de puntos configurables por empresa para compras, referidos, mantenimientos y eventos, incluyendo vigencia y registro automático del vencimiento.
 - Tendencias de registros, ventas y canjes durante los últimos 14 días.
 - Contextos visuales diferenciados por empresa: color, logo, lema y banner propio en marketplace, recompensas y dashboard.
@@ -63,7 +63,7 @@ npm run dev -- --host 127.0.0.1
 3. En **Marketplace**, abre **Zontes 703F → Comprar con USDT de prueba → Confirmar compra de prueba**.
 4. El saldo queda en **8.510 USDT**, recibes **1.000 puntos Zontes** adicionales y se guarda un comprobante en **Mi club → Mis compras**. Recargar la página conserva los cambios.
 5. En **Recompensas**, abre **Mantenimiento básico** Zontes y canjea 500 puntos. Aparece la tarjeta con foto; **Mostrar QR para el taller** despliega el identificador.
-6. Pulsa **Probar validación en taller → Entrar como administrador demo** y confirma la autorización del cliente y el uso. El beneficio pasa a **Utilizados y vencidos**, marcado **Consumido · quema simulada**.
+6. Ingresa con el correo de la empresa correspondiente y abre **Operación y taller** para confirmar la autorización del cliente y el uso. El beneficio pasa a **Utilizados y vencidos**, marcado **Consumido · quema simulada**.
 7. Para volver al cliente, entra en **Mi club → Salir de la demo → Iniciar sesión** con su correo. Un segundo uso se rechaza. Se conserva el historial sin volver a descontar puntos.
 
 Una compra de prueba es una transición local, sin pagos ni reserva comercial. El comprobante tiene una clave de operación para evitar cobrar o acreditar puntos dos veces al repetir una confirmación.
@@ -84,7 +84,7 @@ La opción **Sobre la demo y sus fuentes → Reiniciar datos de esta demo** rest
 2. En **Empresas**, registra una empresa y selecciona **Publicada** para que aparezca en la landing y en el registro de clientes; **Suspendida** retira su catálogo y bloquea la edición de la empresa.
 3. Consulta métricas globales o filtra una empresa. Las secciones muestran clientes, compras, motos, canjes, wallets y actividad; los reportes se pueden exportar en CSV.
 4. Cierra sesión e ingresa con `zontes@gmail.com`, `niu@gmail.com` o `kiden@gmail.com`. Cada correo abre únicamente el dashboard y los datos de esa empresa.
-5. Desde el dashboard empresarial se pueden agregar, editar o retirar motos y recompensas, configurar precios, cupos y una dirección EVM de demo. Los cambios publicados se reflejan en la landing.
+5. Desde el dashboard empresarial se pueden registrar, editar, bloquear o dar de baja clientes; agregar, editar o retirar motos y recompensas; configurar puntos ganados, costos de canje, precios, cupos y una dirección EVM de demo. Los cambios publicados se reflejan en la landing.
 
 Los roles y datos siguen siendo locales en esta etapa. No existe contraseña ni sincronización real entre navegadores hasta implementar el backend.
 
@@ -92,7 +92,7 @@ Los roles y datos siguen siendo locales en esta etapa. No existe contraseña ni 
 
 **Esta etapa es frontend.** No incluye backend, verificación de correo, autenticación segura, contratos, pagos, wallets, tokens ni NFTs reales. El saldo USDT ficticio, las compras, los puntos y cupones se guardan en `localStorage` del navegador actual; no se comparten entre dispositivos.
 
-El taller requiere una cuenta con rol administrador dentro de la demo. Ese acceso es público y sirve para probar el frontend; la autorización real se hará en el servidor. Su casilla de autorización no sustituye una verificación de titularidad; el QR solo identifica el cupón local.
+El taller requiere una cuenta con rol de empresa dentro de la demo. La autorización real se hará en el servidor. Su casilla de autorización no sustituye una verificación de titularidad; el QR solo identifica el cupón local.
 
 La siguiente etapa integrará **EVM en Base Sepolia (chain ID 84532)**: registro por correo con creación automática de wallet, puntos tokenizados y cupones ERC-721 que se consumen y queman con autorización del cliente y del taller. Se prevé descontar puntos y emitir el NFT en una sola transacción. Los cupones usados conservarán su historial.
 

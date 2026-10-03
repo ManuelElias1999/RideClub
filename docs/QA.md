@@ -5,10 +5,10 @@ Fecha: 3 de octubre de 2026. Actualización de registro, compras y tarjeta de be
 ## Comprobaciones de código
 
 - `npm run build`: TypeScript y compilación Vite completadas.
-- `npm test`: diecinueve pruebas Vitest completadas.
+- `npm test`: veintiuna pruebas Vitest completadas.
 - `git diff --check`: sin errores de espacios.
 
-Las pruebas cubren canje y consumo de un solo uso, saldo por marca, vigencia, consentimiento, cupos, registro y referido, teléfonos regionales, compras con descuento USDT y puntos atómicos, saldo insuficiente, modelos sin precio, reintentos idempotentes, recargas y migración de cuentas anteriores. También validan marcas, actualización del perfil sin pérdida de saldo, roles cliente/administrador/empresa, aislamiento entre empresas, protección de acciones administrativas, CRUD de clientes, reglas de puntos por empresa y vencimiento trazable. Comprueban que no se repone saldo gastado al recargar y que un referido no se premia dos veces, incluso entre marcas o después de una confirmación manual del taller.
+Las pruebas cubren canje y consumo de un solo uso, saldo por marca, vigencia, consentimiento, cupos, registro y referido, teléfonos regionales, compras con descuento USDT y puntos atómicos, saldo insuficiente, modelos sin precio, reintentos idempotentes, recargas y migración de cuentas anteriores. También validan marcas, actualización del perfil sin pérdida de saldo, roles cliente/administrador/empresa, aislamiento entre empresas, administrador global de consulta, CRUD empresarial de clientes, inicio de sesión de una cuenta creada y persistida, bloqueo de acceso, reglas de puntos por empresa y vencimiento trazable. Comprueban que no se repone saldo gastado al recargar y que un referido no se premia dos veces, incluso entre marcas o después de una confirmación manual del taller.
 
 ## Recorrido real de navegador
 
@@ -22,7 +22,7 @@ Chromium headless con Playwright. Resultado: **PASS**, sin errores de JavaScript
 6. Comprobante mostrado en **Mis compras**. Recargar el navegador conserva compra y saldos.
 7. Recarga demo: el saldo pasa de 8.510 a 28.510 USDT ficticios.
 8. Canje de mantenimiento por 500 puntos: saldo resultante 500. Tarjeta con foto cargada, marca y estado. El QR está oculto inicialmente y se despliega al solicitarlo.
-9. El cliente no ve formularios administrativos. El acceso explícito como administrador demo permite el uso autorizado en el taller; segundo intento con nueva autorización rechazado, sin otro descuento de puntos.
+9. El cliente no ve formularios operativos. El acceso con la cuenta de la empresa permite el uso autorizado en el taller; segundo intento con nueva autorización rechazado, sin otro descuento de puntos.
 10. Al volver al correo del cliente, el beneficio sigue en **Utilizados y vencidos**, marcado **Consumido · quema simulada**, sin un QR reutilizable.
 11. Migración de un estado anterior sin saldo USDT ni compras: añade 20.000 USDT de prueba y conserva cuenta, puntos y cupón usado.
 12. Las cuatro vistas (`marketplace`, `club`, `recompensas`, `taller`) revisadas a 360, 390, 768 y 1.978 px: 16 combinaciones sin desbordamiento horizontal ni imágenes locales rotas.

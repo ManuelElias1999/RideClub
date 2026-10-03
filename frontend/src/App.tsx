@@ -106,6 +106,22 @@ export default function App() {
     }
   }, [state]);
   useEffect(() => {
+    const current = state.accounts.find((item) => item.id === state.currentId);
+    if (
+      current?.role === "client" &&
+      current.status &&
+      current.status !== "active"
+    ) {
+      commit({ ...stateRef.current, currentId: null });
+      setToast(
+        current.status === "blocked"
+          ? "Tu cuenta está bloqueada temporalmente. Contacta a la empresa."
+          : "Tu cuenta fue dada de baja y ya no puede iniciar sesión.",
+      );
+      navigate("marketplace");
+    }
+  }, [state.currentId, state.accounts]);
+  useEffect(() => {
     const listener = () => {
       setPage(getPage());
       setMenu(false);
@@ -466,7 +482,7 @@ export default function App() {
             </section>
           ))}
         {page === "taller" &&
-          (staff ? (
+          (account?.role === "company" ? (
             <Workshop
               key={workshopCode}
               state={workshopState}
@@ -499,17 +515,17 @@ export default function App() {
           ) : (
             <section className="page-section admin-access">
               <Wrench size={35} />
-              <span className="eyebrow">ACCESO DE ADMINISTRADOR</span>
-              <h1>Gestiona tu club.</h1>
+              <span className="eyebrow">ACCESO DE EMPRESA</span>
+              <h1>Gestiona la operación de tu marca.</h1>
               <p>
                 La validación de beneficios y la acreditación de puntos
-                corresponden al administrador.
+                corresponden a cada empresa.
               </p>
               <button
                 className="button primary"
-                onClick={() => commit(enterAdminDemo(stateRef.current))}
+                onClick={() => openAuth("login")}
               >
-                Entrar como administrador demo <ChevronRight size={18} />
+                Iniciar sesión de empresa <ChevronRight size={18} />
               </button>
               <p className="fine-print">
                 Cambiarás a una cuenta de prueba con rol administrador. Tus
@@ -692,9 +708,13 @@ export default function App() {
             navigate("admin");
           }}
           onDemo={() => {
-            commit({ ...stateRef.current, currentId: "demo-rider" });
-            setAuth(false);
-            navigate("club");
+            try {
+              commit(login(stateRef.current, "manuel@rideclub.demo"));
+              setAuth(false);
+              navigate("club");
+            } catch (e) {
+              setAuthError((e as Error).message);
+            }
           }}
         />
       )}

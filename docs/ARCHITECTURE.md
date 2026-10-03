@@ -17,13 +17,13 @@ React 19 + TypeScript + Vite. Interfaz responsive con CSS propio, Lucide y QRCod
 - `src/data/CatalogContext.tsx`: catálogo dinámico derivado de empresas autorizadas y elementos publicados.
 - `src/lib/business.ts`: control de alcance por rol, consultas agregadas, auditoría y operaciones de empresas, motos, recompensas y wallets.
 - Las reglas de puntuación pertenecen a cada empresa y guardan importe y vigencia para compra, referido, mantenimiento y evento. Cada acreditación registra `expiresAt`; al cargar la aplicación, los vencimientos pendientes descuentan el saldo una sola vez y generan un movimiento trazable.
-- La gestión de clientes permite altas administrativas, edición, bloqueo y baja lógica. La baja conserva compras y canjes; el backend deberá aplicar las mismas decisiones mediante RBAC y auditoría persistente.
+- La gestión de clientes pertenece a cada empresa: permite altas, edición, bloqueo temporal y baja lógica solo dentro de su marca. La baja conserva compras y canjes; el administrador global mantiene acceso de consulta y el backend deberá aplicar las mismas decisiones mediante RBAC y auditoría persistente.
 - `src/components/ui.tsx`: diálogos nativos, logos y componentes comunes.
 - `src/App.tsx`: composición, navegación por hash, persistencia y operaciones del usuario.
 
 ## Estado y límites
 
-El estado se guarda en `localStorage` (`rideclub-demo-v1`). No es compartido entre dispositivos ni navegadores. El correo se normaliza y no puede duplicarse dentro de la demo. No existe autenticación real ni verificación de correo. Los roles locales son `client`, `company` y `admin`. El administrador consulta toda la plataforma; una empresa solo puede consultar y modificar recursos vinculados a su `companyId`; el cliente no puede ejecutar operaciones administrativas. Esta separación local de vistas y acciones no es autorización segura y deberá repetirse en cada endpoint del backend.
+El estado se guarda en `localStorage` (`rideclub-demo-v1`). No es compartido entre dispositivos ni navegadores. El correo se normaliza y no puede duplicarse dentro de la demo. No existe autenticación real ni verificación de correo. Los roles locales son `client`, `company` y `admin`. El administrador consulta toda la plataforma y gestiona altas y permisos de empresas, pero no opera clientes ni catálogos; una empresa solo puede consultar y modificar recursos vinculados a su `companyId`; el cliente no puede ejecutar operaciones administrativas. Esta separación local de vistas y acciones no es autorización segura y deberá repetirse en cada endpoint del backend.
 
 El administrador registra empresas con correo, estado e identidad visual. `active` las publica en landing y registro; `pending` las mantiene fuera del catálogo; `suspended` además bloquea sus escrituras. El primer ingreso con el correo asignado crea una sesión empresarial local. El catálogo dinámico admite nuevas marcas sin modificar las vistas, y la auditoría registra cambios administrativos. Las eliminaciones de motos y recompensas son archivados recuperables para no romper el historial.
 

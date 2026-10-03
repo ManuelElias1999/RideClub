@@ -4,6 +4,7 @@ import {
   buy,
   enterAdminDemo,
   initialDemo,
+  loadDemo,
   login,
 } from "./demo";
 import {
@@ -70,7 +71,7 @@ describe("RideClub business dashboards", () => {
   });
 
   it("applies company-specific point values and expiration dates", () => {
-    let state = enterAdminDemo(initialDemo());
+    let state = login(initialDemo(), "zontes@gmail.com");
     const zontes = state.companies.find((company) => company.name === "Zontes")!;
     state = savePointRules(state, zontes.id, {
       ...zontes.pointRules,
@@ -102,8 +103,8 @@ describe("RideClub business dashboards", () => {
     );
   });
 
-  it("lets the global admin create, edit and block a client", () => {
-    let state = enterAdminDemo(initialDemo());
+  it("lets a company create and edit its client, and blocks subsequent access", () => {
+    let state = login(initialDemo(), "niu@gmail.com");
     state = saveClient(state, {
       name: "Cliente prueba",
       email: "cliente@demo.com",
@@ -114,6 +115,14 @@ describe("RideClub business dashboards", () => {
     const client = state.accounts.find(
       (account) => account.email === "cliente@demo.com",
     )!;
+    expect(login(state, "cliente@demo.com").currentId).toBe(client.id);
+    Object.defineProperty(globalThis, "localStorage", {
+      configurable: true,
+      value: { getItem: () => JSON.stringify(state) },
+    });
+    expect(login(loadDemo(), "cliente@demo.com").currentId).toBe(client.id);
+    delete (globalThis as { localStorage?: unknown }).localStorage;
+    state = login(state, "niu@gmail.com");
     state = saveClient(
       state,
       { ...client, name: "Cliente actualizado", status: "blocked" },
@@ -123,5 +132,39 @@ describe("RideClub business dashboards", () => {
       "Cliente actualizado",
     );
     expect(() => login(state, "cliente@demo.com")).toThrow("bloqueada");
+  });
+
+  it("keeps the global administrator read-only for client and loyalty operations", () => {
+    const state = enterAdminDemo(initialDemo());
+    const zontes = state.companies.find((company) => company.name === "Zontes")!;
+    expect(() =>
+      saveClient(state, {
+        name: "Cliente prueba",
+        email: "cliente@demo.com",
+        phone: "+59170000001",
+        brand: "Zontes",
+        status: "active",
+      }),
+    ).toThrow("corresponde a cada empresa");
+    expect(() => savePointRules(state, zontes.id, zontes.pointRules)).toThrow(
+      "corresponde a la empresa",
+    );
+  });
+
+  it("prevents a company from changing clients registered under another brand", () => {
+    let state = login(initialDemo(), "niu@gmail.com");
+    expect(() =>
+      saveClient(
+        state,
+        {
+          name: "Manuel",
+          email: "manuel@rideclub.demo",
+          phone: "+59170000000",
+          brand: "NIU",
+          status: "active",
+        },
+        "demo-rider",
+      ),
+    ).toThrow("tu empresa");
   });
 });

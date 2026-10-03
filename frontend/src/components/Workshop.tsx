@@ -45,7 +45,7 @@ export default function Workshop({
   const clients = state.accounts.filter((a) => a.role === "client");
   const [client, setClient] = useState(clients[0]?.id ?? "");
   const [brand, setBrand] = useState<Brand>(companyBrand ?? "Zontes");
-  const [kind, setKind] = useState<ActivityKind>("Compra");
+  const [kind, setKind] = useState<ActivityKind>("Mantenimiento");
   const [ref, setRef] = useState("");
   const [confirmed, setConfirmed] = useState(false);
   const [code, setCode] = useState(couponCode);
@@ -175,10 +175,16 @@ export default function Workshop({
                 value={kind}
                 onChange={(e) => setKind(e.target.value as ActivityKind)}
               >
-                {Object.keys(activeRules ?? {}).map((k) => (
+                {Object.keys(activeRules ?? {})
+                  .filter((k) => k !== "Compra")
+                  .map((k) => (
                   <option key={k}>{k}</option>
-                ))}
+                  ))}
               </select>
+              <small>
+                Los puntos por compra se acreditan automáticamente en el
+                checkout y no se registran aquí.
+              </small>
             </label>
           </div>
           <div className="award-summary">

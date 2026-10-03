@@ -1,6 +1,7 @@
 import type { Bike, Brand, Reward } from "../data/catalog";
 import {
   defaultPointRules,
+  demoFunding,
   id,
   type Account,
   type Company,
@@ -41,9 +42,20 @@ export function assertCompanyAccess(
   return company;
 }
 export function manageBrand(state: Demo, brand: Brand): Company {
+  const current = actor(state);
+  if (current.role !== "company")
+    throw Error("Esta operación corresponde al equipo de la empresa.");
   const company = state.companies.find((c) => c.name === brand);
   if (!company) throw Error("La empresa no existe.");
   return assertCompanyAccess(state, company.id, true);
+}
+
+function companyOperator(state: Demo, companyId: string): Company {
+  if (actor(state).role !== "company")
+    throw Error(
+      "Esta configuración corresponde a la empresa. El administrador global solo puede consultarla.",
+    );
+  return assertCompanyAccess(state, companyId, true);
 }
 export function safeURL(value: string, image = false): string {
   value = value.trim();
@@ -200,14 +212,20 @@ export function saveClient(
   draft: ClientDraft,
   accountId?: string,
 ): Demo {
-  if (actor(state).role !== "admin")
-    throw Error("Solo el administrador global puede gestionar usuarios.");
+  const current = actor(state);
+  if (current.role !== "company")
+    throw Error(
+      "La gestión de clientes corresponde a cada empresa. El administrador global solo puede consultarlos.",
+    );
+  const company = assertCompanyAccess(state, current.companyId!, true);
   const existing = accountId
     ? state.accounts.find(
         (account) => account.id === accountId && account.role === "client",
       )
     : undefined;
   if (accountId && !existing) throw Error("El cliente ya no existe.");
+  if (existing && existing.brand !== company.name)
+    throw Error("Solo puedes editar clientes registrados en tu empresa.");
   const name = text(draft.name, "el nombre del cliente", 2, 80);
   const email = draft.email.trim().toLowerCase();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 160)
@@ -220,11 +238,8 @@ export function saveClient(
     email === "admin@rideclub.demo"
   )
     throw Error("Este correo ya está asociado a otra cuenta.");
-  if (
-    !draft.brand ||
-    !state.companies.some((company) => company.name === draft.brand)
-  )
-    throw Error("Selecciona una empresa válida para el perfil.");
+  if (draft.brand !== company.name)
+    throw Error("El cliente debe quedar vinculado a tu empresa.");
   const phone = draft.phone?.trim();
   if (phone && !/^\+[1-9]\d{7,14}$/.test(phone))
     throw Error("Usa el celular en formato internacional, por ejemplo +59170000000.");
@@ -240,7 +255,7 @@ export function saveClient(
         brand: draft.brand,
         role: "client",
         createdAt: new Date().toISOString(),
-        balanceUSDT: 0,
+        balanceUSDT: demoFunding,
         code: uniqueCode(state),
         wallet: { status: "pending", chainId: 84532 },
         points: Object.fromEntries(
@@ -249,7 +264,6 @@ export function saveClient(
         favorites: [],
         status: draft.status,
       };
-  const company = state.companies.find((item) => item.name === draft.brand)!;
   return audit(
     {
       ...state,
@@ -264,7 +278,7 @@ export function saveClient(
       ? draft.status === "deleted"
         ? "Cliente dado de baja"
         : "Cliente actualizado"
-      : "Cliente registrado por administración",
+      : "Cliente registrado por la empresa",
     account.id,
   );
 }
@@ -274,7 +288,7 @@ export function savePointRules(
   companyId: string,
   rules: PointRuleSet,
 ): Demo {
-  const company = assertCompanyAccess(state, companyId, true);
+  const company = companyOperator(state, companyId);
   const normalized = Object.fromEntries(
     Object.entries(rules).map(([kind, rule]) => {
       if (
@@ -310,7 +324,7 @@ export function saveBike(
   draft: BikeDraft,
   bikeId?: string,
 ): Demo {
-  const company = assertCompanyAccess(state, companyId, true);
+  const company = companyOperator(state, companyId);
   const existing = bikeId
     ? state.catalogBikes.find((b) => b.id === bikeId)
     : undefined;
@@ -364,7 +378,7 @@ export function saveReward(
   draft: RewardDraft,
   rewardId?: string,
 ): Demo {
-  const company = assertCompanyAccess(state, companyId, true);
+  const company = companyOperator(state, companyId);
   const existing = rewardId
     ? state.catalogRewards.find((r) => r.id === rewardId)
     : undefined;
@@ -451,7 +465,7 @@ export function saveWallet(
   companyId: string,
   address: string,
 ): Demo {
-  const company = assertCompanyAccess(state, companyId, true);
+  const company = companyOperator(state, companyId);
   address = address.trim();
   if (address && !/^0x[0-9a-fA-F]{40}$/.test(address))
     throw Error(

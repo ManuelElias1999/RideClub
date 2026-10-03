@@ -4124,6 +4124,16 @@ main {
 .points-rule-list small { grid-column: 1 / -1; color: #7a8575; }
 .expiry-explanation { display: flex; align-items: center; gap: 12px; margin-top: 18px; padding: 14px; border-radius: 7px; color: #506443; background: #edf5e5; font-size: 11px; }
 .expiry-explanation strong { display: block; }
+.status-explanation { display: flex; align-items: flex-start; gap: 10px; margin-top: 18px; padding: 14px; border: 1px solid #dde4d7; border-radius: 7px; color: #596653; background: #f7f9f4; font-size: 10px; line-height: 1.6; }
+.status-explanation svg { flex: 0 0 auto; color: var(--company-accent, #668f3a); }
+.redemption-costs-heading { display: flex; justify-content: space-between; gap: 16px; margin: 25px 0 12px; padding-top: 22px; border-top: 1px solid #e2e7dc; }
+.redemption-costs-heading h3 { margin: 0 0 5px; font-size: 16px; }
+.redemption-costs-heading p { max-width: 720px; margin: 0; color: #6d7868; font-size: 10px; }
+.redemption-costs-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.redemption-costs-grid article { display: grid; gap: 6px; padding: 14px; border: 1px solid #e0e5da; border-radius: 7px; background: #fbfcf8; }
+.redemption-costs-grid article > span { color: #75806f; font-size: 8px; letter-spacing: .06em; text-transform: uppercase; }
+.redemption-costs-grid article > strong { font-size: 12px; }
+.redemption-costs-grid article > b { color: var(--company-accent, #5b8134); font-size: 16px; }
 .rule-editor-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .rule-editor-grid fieldset { display: grid; gap: 10px; margin: 0; padding: 15px; border: 1px solid #dce2d6; border-radius: 7px; }
 .rule-editor-grid legend { padding: 0 7px; font-size: 12px; font-weight: 750; }
@@ -4141,7 +4151,7 @@ main {
 .trend-day > span { overflow: hidden; color: #7b8676; font-size: 7px; white-space: nowrap; }
 
 @media (max-width: 1000px) {
-  .points-rules-grid { grid-template-columns: 1fr 1fr; }
+  .points-rules-grid, .redemption-costs-grid { grid-template-columns: 1fr 1fr; }
   .trend-chart { overflow-x: auto; min-width: 0; }
   .trend-bars { min-width: 720px; }
 }
@@ -4149,7 +4159,7 @@ main {
   .company-context-banner, .brand-focus-banner { align-items: flex-start; padding: 20px; }
   .company-context-banner .brand-logo, .brand-focus-banner .brand-logo { width: 82px; height: 38px; }
   .company-context-banner h2, .brand-focus-banner h2 { font-size: 19px; }
-  .points-rules-grid, .rule-editor-grid { grid-template-columns: 1fr; }
+  .points-rules-grid, .rule-editor-grid, .redemption-costs-grid { grid-template-columns: 1fr; }
   .panel-actions { align-items: stretch; flex-direction: column; width: 100%; }
   .panel-actions .dashboard-search { max-width: none; }
 }
