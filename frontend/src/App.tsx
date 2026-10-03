@@ -165,6 +165,28 @@ export default function App() {
   useEffect(() => {
     if (!supabaseEnabled) return;
     let active = true;
+    const authCallback =
+      new URLSearchParams(window.location.search).get("auth") === "callback" ||
+      new URLSearchParams(window.location.hash.slice(1)).has("access_token");
+    const callbackError = new URLSearchParams(
+      window.location.hash.slice(1),
+    ).get("error_description");
+    if (callbackError) {
+      setToast(callbackError.replace(/\+/g, " "));
+    }
+    const enterAuthenticatedArea = (next: Demo | undefined) => {
+      if (!next?.currentId) return;
+      const role = next.accounts.find(
+        (item) => item.id === next.currentId,
+      )?.role;
+      navigate(
+        role === "admin" ? "admin" : role === "company" ? "empresa" : "club",
+      );
+      setAuth(false);
+      if (window.location.search) {
+        window.history.replaceState({}, "", `${window.location.pathname}${window.location.hash}`);
+      }
+    };
     const refresh = async () => {
       try {
         const next = await loadBackendState();
@@ -178,22 +200,21 @@ export default function App() {
         return undefined;
       }
     };
-    void refresh();
     const { data } = supabaseClient().auth.onAuthStateChange((event) => {
       window.setTimeout(() => {
         void (async () => {
           const next = await refresh();
-          if (event !== "SIGNED_IN" || !next?.currentId) return;
-          const role = next.accounts.find(
-            (item) => item.id === next.currentId,
-          )?.role;
-          navigate(
-            role === "admin" ? "admin" : role === "company" ? "empresa" : "club",
-          );
-          setAuth(false);
+          if (event === "SIGNED_IN") enterAuthenticatedArea(next);
         })();
       }, 0);
     });
+    void (async () => {
+      const next = await refresh();
+      // The SDK can finish restoring the callback session before the auth
+      // listener subscribes. This fallback makes that successful session
+      // deterministic instead of leaving the user on the login screen.
+      if (authCallback) enterAuthenticatedArea(next);
+    })();
     window.addEventListener("focus", refresh);
     return () => {
       active = false;

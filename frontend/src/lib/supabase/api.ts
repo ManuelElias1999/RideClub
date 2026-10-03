@@ -55,7 +55,9 @@ export async function requestRegistration(input: {
     email: input.email.trim().toLowerCase(),
     options: {
       shouldCreateUser: true,
-      emailRedirectTo: `${window.location.origin}/#club`,
+      // Supabase returns the session in the URL hash. Keep our hash-based
+      // router out of the callback URL so it cannot overwrite those tokens.
+      emailRedirectTo: `${window.location.origin}/?auth=callback`,
       data: {
         full_name: input.name.trim(),
         phone: input.phone,
@@ -70,7 +72,10 @@ export async function requestRegistration(input: {
 export async function requestLogin(email: string) {
   const { error } = await supabaseClient().auth.signInWithOtp({
     email: email.trim().toLowerCase(),
-    options: { shouldCreateUser: false, emailRedirectTo: `${window.location.origin}/#club` },
+    options: {
+      shouldCreateUser: false,
+      emailRedirectTo: `${window.location.origin}/?auth=callback`,
+    },
   });
   fail(error);
 }
