@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { rewards } from "../data/catalog";
+import { bikes, rewards } from "../data/catalog";
 import {
+  buy,
+  fundDemo,
+  loadDemo,
+  storageKey,
   credit,
   initialDemo,
   login,
@@ -8,6 +12,7 @@ import {
   register,
   useCoupon,
 } from "./demo";
+const phone = { region: "BO", number: "70000000" };
 const maintenance = rewards.find((r) => r.id === "Zontes-service")!;
 describe("RideClub demo lifecycle", () => {
   it("redeems 500 points atomically and preserves the used coupon without a second debit", () => {
@@ -79,7 +84,7 @@ describe("RideClub demo lifecycle", () => {
       initialDemo(),
       "Ana",
       " ANA@example.com ",
-      "NIU",
+      phone,
       "10002026",
     );
     const ana = s.accounts[1];
@@ -87,13 +92,13 @@ describe("RideClub demo lifecycle", () => {
     expect(ana.code).toMatch(/^\d{8}$/);
     expect(ana.wallet.status).toBe("pending");
     expect(ana.points.NIU).toBe(0);
-    s = register(s, "Luis", "luis@example.com", "Kiden", "");
+    s = register(s, "Luis", "luis@example.com", phone, "");
     expect(s.accounts[2].code).not.toBe(ana.code);
-    expect(() => register(s, "Ana", "ana@example.com", "NIU", "")).toThrow(
+    expect(() => register(s, "Ana", "ana@example.com", phone, "")).toThrow(
       "ya tiene",
     );
     expect(() =>
-      register(s, "Eva", "eva@example.com", "NIU", "99999999"),
+      register(s, "Eva", "eva@example.com", phone, "99999999"),
     ).toThrow("No encontramos");
     expect(login(s, "ana@example.com").currentId).toBe(ana.id);
   });
@@ -102,7 +107,7 @@ describe("RideClub demo lifecycle", () => {
       initialDemo(),
       "Ana",
       "ana@example.com",
-      "NIU",
+      phone,
       "10002026",
     );
     const ana = s.accounts[1];
@@ -118,7 +123,7 @@ describe("RideClub demo lifecycle", () => {
     ).toThrow("ya recibió");
   });
   it("rejects duplicate references per brand even for different customers", () => {
-    const s = register(initialDemo(), "Ana", "ana@example.com", "NIU", "");
+    const s = register(initialDemo(), "Ana", "ana@example.com", phone, "");
     const credited = credit(
       s,
       s.accounts[1].id,
@@ -135,5 +140,94 @@ describe("RideClub demo lifecycle", () => {
       credit(credited, "demo-rider", "Kiden", "Compra", "INVOICE-2", true)
         .accounts[0].points.Kiden,
     ).toBe(1000);
+  });
+});
+
+describe("phone, simulated purchases and migration", () => {
+  it("registers a normalized regional phone without a preferred brand", () => {
+    const s = register(initialDemo(), "Ana", "ana@example.com", phone, "");
+    expect(s.accounts[1].phone).toBe("+59170000000");
+    expect(s.accounts[1].balanceUSDT).toBe(20000);
+    expect(s.accounts[1]).not.toHaveProperty("brand");
+    expect(() =>
+      register(
+        s,
+        "Eva",
+        "eva@example.com",
+        { region: "BO", number: "123" },
+        "",
+      ),
+    ).toThrow("celular");
+    expect(
+      register(
+        s,
+        "Eva",
+        "eva@example.com",
+        { region: "US", number: "2025550123" },
+        "",
+      ).accounts[2].phone,
+    ).toBe("+12025550123");
+  });
+  it("debits USDT and awards points with a receipt, safely retrying a checkout", () => {
+    const s = initialDemo();
+    const { state, purchase } = buy(s, "demo-rider", "z703f", "CHECKOUT-1");
+    expect(state.accounts[0].balanceUSDT).toBe(8510);
+    expect(state.accounts[0].points.Zontes).toBe(2000);
+    expect(state.purchases).toEqual([purchase]);
+    expect(s.accounts[0].balanceUSDT).toBe(20000);
+    expect(buy(state, "demo-rider", "z703f", "CHECKOUT-1").state).toBe(state);
+    expect(() => buy(state, "demo-rider", "nnqi", "CHECKOUT-1")).toThrow(
+      "otra compra",
+    );
+    expect(() => buy(state, "demo-rider", "z703f", "CHECKOUT-2")).toThrow(
+      "insuficiente",
+    );
+    const unpriced = bikes.find((b) => !b.price)!;
+    expect(() => buy(s, "demo-rider", unpriced.id, "CHECKOUT-3")).toThrow(
+      "cotización",
+    );
+    expect(fundDemo(state, "demo-rider").accounts[0].balanceUSDT).toBe(28510);
+  });
+  it("automatically awards a referral on the first checkout only, across brands and admin validation", () => {
+    const s = register(
+      initialDemo(),
+      "Ana",
+      "ana@example.com",
+      phone,
+      "10002026",
+    );
+    const ana = s.accounts[1];
+    const first = buy(s, ana.id, "nnqi", "A").state;
+    expect(first.accounts[0].points.NIU).toBe(200);
+    expect(first.accounts[1].points.NIU).toBe(1000);
+    const second = buy(first, ana.id, "zgk200", "B").state;
+    expect(second.accounts[0].points.Zontes).toBe(1000);
+    expect(() =>
+      credit(second, ana.id, "Zontes", "Referido", "ADMIN-3", true),
+    ).toThrow("ya recibió");
+    expect(() =>
+      credit(second, ana.id, "NIU", "Compra", first.purchases[0].id, true),
+    ).toThrow("ya fue acreditada");
+  });
+  it("preserves existing accounts and coupons, funds legacy accounts once and restores purchases", () => {
+    const legacy = redeem(initialDemo(), "demo-rider", maintenance).state;
+    const old = JSON.parse(JSON.stringify(legacy));
+    delete old.accounts[0].balanceUSDT;
+    delete old.purchases;
+    const storage = { getItem: () => JSON.stringify(old) };
+    Object.defineProperty(globalThis, "localStorage", {
+      configurable: true,
+      value: storage,
+    });
+    const migrated = loadDemo();
+    expect(migrated.accounts[0].balanceUSDT).toBe(20000);
+    expect(migrated.accounts[0].points.Zontes).toBe(500);
+    expect(migrated.coupons).toEqual(legacy.coupons);
+    const purchased = buy(migrated, "demo-rider", "z703f", "MIGRATION").state;
+    storage.getItem = () => JSON.stringify(purchased);
+    expect(loadDemo().accounts[0].balanceUSDT).toBe(8510);
+    expect(loadDemo().purchases).toEqual(purchased.purchases);
+    expect(storageKey).toBe("rideclub-demo-v1");
+    delete (globalThis as { localStorage?: unknown }).localStorage;
   });
 });

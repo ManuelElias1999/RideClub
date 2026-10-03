@@ -1,15 +1,19 @@
 import {
+  bikes,
   brands,
   pointsRules,
   type Brand,
   type Reward,
   type ActivityKind,
 } from "../data/catalog";
+import { normalizePhone, type PhoneInput } from "./phone";
+export const demoFunding = 20000;
 export type Account = {
   id: string;
   name: string;
   email: string;
-  brand: Brand;
+  phone?: string;
+  balanceUSDT: number;
   code: string;
   referredBy?: string;
   wallet: { status: "pending"; chainId: 84532 };
@@ -38,18 +42,31 @@ export type Activity = {
   reference?: string;
   kind?: ActivityKind;
 };
+export type Purchase = {
+  id: string;
+  ownerId: string;
+  bikeId: string;
+  brand: Brand;
+  model: string;
+  amountUSDT: number;
+  points: number;
+  createdAt: string;
+  operationId: string;
+};
 export type Demo = {
   version: 1;
   accounts: Account[];
   currentId: string | null;
   coupons: Coupon[];
   activities: Activity[];
+  purchases: Purchase[];
 };
 const seed: Account = {
   id: "demo-rider",
   name: "Manuel",
   email: "manuel@rideclub.demo",
-  brand: "Zontes",
+  phone: "+59170000000",
+  balanceUSDT: demoFunding,
   code: "10002026",
   wallet: { status: "pending", chainId: 84532 },
   points: { Zontes: 1000, NIU: 0, Kiden: 0 },
@@ -60,6 +77,7 @@ export const initialDemo = (): Demo => ({
   accounts: [structuredClone(seed)],
   currentId: null,
   coupons: [],
+  purchases: [],
   activities: [
     {
       id: "seed-points",
@@ -78,18 +96,15 @@ export function register(
   state: Demo,
   name: string,
   email: string,
-  brand: Brand,
+  phone: PhoneInput,
   referredBy: string,
 ): Demo {
   name = name.trim();
   email = email.trim().toLowerCase();
   referredBy = referredBy.trim();
-  if (
-    name.length < 2 ||
-    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ||
-    !brands.includes(brand)
-  )
-    throw Error("Revisa tu nombre, correo y marca.");
+  if (name.length < 2 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+    throw Error("Revisa tu nombre y correo.");
+  const normalizedPhone = normalizePhone(phone);
   if (state.accounts.some((a) => a.email === email))
     throw Error(
       "Este correo ya tiene una cuenta de demo. Ingresa desde “Ya tengo cuenta”.",
@@ -108,7 +123,8 @@ export function register(
     id: id(),
     name,
     email,
-    brand,
+    phone: normalizedPhone,
+    balanceUSDT: demoFunding,
     code,
     referredBy: referredBy || undefined,
     wallet: { status: "pending", chainId: 84532 },
@@ -299,13 +315,129 @@ export function loadDemo(): Demo {
             brands.every(
               (b) => Number.isFinite(a.points[b]) && a.points[b] >= 0,
             ) &&
-            Array.isArray(a.favorites),
+            Array.isArray(a.favorites) &&
+            (a.balanceUSDT === undefined ||
+              (Number.isFinite(a.balanceUSDT) && a.balanceUSDT >= 0)),
         )
       )
-        return s;
+        return {
+          ...s,
+          accounts: s.accounts.map((a: Account) => ({
+            ...a,
+            balanceUSDT:
+              a.balanceUSDT === undefined ? demoFunding : a.balanceUSDT,
+          })),
+          purchases: Array.isArray(s.purchases) ? s.purchases : [],
+        };
     }
   } catch {
     /* Corrupt or unavailable storage: start a fresh demo. */
   }
   return initialDemo();
+}
+
+/** Atomic simulated checkout. The operation ID makes retries safe. */
+export function buy(
+  state: Demo,
+  ownerId: string,
+  bikeId: string,
+  operationId: string,
+): { state: Demo; purchase: Purchase } {
+  const existing = state.purchases.find(
+    (p) => p.ownerId === ownerId && p.operationId === operationId,
+  );
+  if (existing) {
+    if (existing.bikeId !== bikeId)
+      throw Error("La operación ya pertenece a otra compra.");
+    return { state, purchase: existing };
+  }
+  const account = state.accounts.find((a) => a.id === ownerId);
+  const bike = bikes.find((b) => b.id === bikeId);
+  if (!account) throw Error("Inicia sesión para comprar en la demo.");
+  if (!bike?.price || !operationId.trim())
+    throw Error("Este modelo necesita una cotización antes de comprar.");
+  if (account.balanceUSDT < bike.price)
+    throw Error("Saldo USDT de prueba insuficiente. Recarga desde Mi club.");
+  const purchase: Purchase = {
+    id: `DEMO-${id().toUpperCase()}`,
+    ownerId,
+    bikeId,
+    brand: bike.brand,
+    model: bike.name,
+    amountUSDT: bike.price,
+    points: pointsRules.Compra,
+    createdAt: new Date().toISOString(),
+    operationId,
+  };
+  const inviter = state.accounts.find((a) => a.code === account.referredBy);
+  const awardReferral =
+    inviter &&
+    !state.activities.some(
+      (a) =>
+        a.kind === "Referido" && a.label === `Referido confirmado: ${ownerId}`,
+    );
+  return {
+    purchase,
+    state: {
+      ...state,
+      accounts: state.accounts.map((a) =>
+        a.id === ownerId
+          ? {
+              ...a,
+              balanceUSDT: a.balanceUSDT - bike.price!,
+              points: {
+                ...a.points,
+                [bike.brand]: a.points[bike.brand] + purchase.points,
+              },
+            }
+          : awardReferral && a.id === inviter.id
+            ? {
+                ...a,
+                points: {
+                  ...a.points,
+                  [bike.brand]: a.points[bike.brand] + pointsRules.Referido,
+                },
+              }
+            : a,
+      ),
+      purchases: [purchase, ...state.purchases],
+      activities: [
+        {
+          id: id(),
+          accountId: ownerId,
+          brand: bike.brand,
+          label: `Compra demo: ${bike.brand} ${bike.name}`,
+          points: purchase.points,
+          date: purchase.createdAt,
+          reference: purchase.id,
+          kind: "Compra",
+        },
+        ...(awardReferral
+          ? [
+              {
+                id: id(),
+                accountId: inviter.id,
+                brand: bike.brand,
+                label: `Referido confirmado: ${ownerId}`,
+                points: pointsRules.Referido,
+                date: purchase.createdAt,
+                reference: purchase.id,
+                kind: "Referido" as const,
+              },
+            ]
+          : []),
+        ...state.activities,
+      ],
+    },
+  };
+}
+export function fundDemo(state: Demo, ownerId: string): Demo {
+  if (!state.accounts.some((a) => a.id === ownerId))
+    throw Error("Inicia sesión para recargar.");
+  return {
+    ...state,
+    accounts: state.accounts.map((a) =>
+      a.id === ownerId ? { ...a, balanceUSDT: a.balanceUSDT + demoFunding } : a,
+    ),
+  };
 }

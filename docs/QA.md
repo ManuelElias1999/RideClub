@@ -1,36 +1,35 @@
 # Verificación de RideClub
 
-Fecha: 3 de octubre de 2026.
+Fecha: 3 de octubre de 2026. Actualización de registro, compras y tarjeta de beneficio.
 
 ## Comprobaciones de código
 
 - `npm run build`: TypeScript y compilación Vite completadas.
-- `npm test`: seis pruebas Vitest completadas.
+- `npm test`: diez pruebas Vitest completadas.
 - `git diff --check`: sin errores de espacios.
 
-Pruebas de dominio: canje atómico de 500 puntos, saldo por marca, conservación del cupón utilizado, segundo uso rechazado, saldo insuficiente, marca incorrecta, autorización requerida, vencimiento, cupos agotados, códigos únicos de ocho dígitos, normalización del correo, códigos inválidos, cuenta duplicada, recompensa al invitador y deduplicación de actividades.
+Las pruebas cubren canje y consumo de un solo uso, saldo por marca, vigencia, consentimiento, cupos, registro y referido, teléfonos regionales, compras con descuento USDT y puntos atómicos, saldo insuficiente, modelos sin precio, reintentos idempotentes, recargas y migración de cuentas anteriores. Comprueban que no se repone saldo gastado al recargar y que un referido no se premia dos veces, incluso entre marcas o después de una confirmación manual del taller.
 
 ## Recorrido real de navegador
 
-Chrome headless con Playwright. Resultado: **PASS**, sin errores de JavaScript.
+Chromium headless con Playwright. Resultado: **PASS**, sin errores de JavaScript.
 
-1. Nueve motos cargadas; filtros NIU, búsqueda sin resultados y restablecimiento del catálogo.
-2. Ficha 703F y su especificación de 699 cc.
-3. Ingreso a la demo de Manuel con 1.000 puntos Zontes.
-4. Canje de mantenimiento por 500 puntos: saldo resultante 500, un cupón emitido y QR generado.
-5. Uso con autorización en el panel del taller.
-6. Segundo intento rechazado como ya utilizado; saldo sigue en 500.
-7. Cupón conservado en “Utilizados y vencidos”.
-8. Registro de una cuenta NIU: rechazo de código inexistente, aceptación de `10002026`, número propio de ocho dígitos y saldo inicial cero.
-9. Perfil que indica wallet pendiente, sin dirección o claves ficticias.
-10. Confirmación del referido en taller: 200 puntos NIU al invitador, no al invitado.
-11. Recarga del navegador conserva saldo y actividad.
-12. Exportación CSV descargada como `rideclub-actividad-demo.csv`.
-13. Las cuatro vistas principales (`marketplace`, `recompensas`, `club`, `taller`) verificadas a 360, 390, 768 y 1440 px: 16 combinaciones sin desbordamiento horizontal.
-14. Imágenes locales cargadas, navegación móvil funcional y enlace de invitación que precarga el código en un contexto nuevo.
+1. El botón superior **Iniciar sesión** abre el ingreso por correo. El registro no pide una marca.
+2. Cambio de región Estados Unidos (+1) a Bolivia (+591); registro con celular local de ocho dígitos y referido `10002026`.
+3. La cuenta nueva guarda `+59170000000`, recibe 20.000 USDT ficticios y empieza con cero puntos.
+4. En una pantalla de 1.978 px, el margen lateral de Mi club mide 48 px.
+5. Compra de Zontes 703F por 11.490 USDT de prueba: saldo 8.510, 1.000 puntos Zontes al comprador y 200 al invitador.
+6. Comprobante mostrado en **Mis compras**. Recargar el navegador conserva compra y saldos.
+7. Recarga demo: el saldo pasa de 8.510 a 28.510 USDT ficticios.
+8. Canje de mantenimiento por 500 puntos: saldo resultante 500. Tarjeta con foto cargada, marca y estado. El QR está oculto inicialmente y se despliega al solicitarlo.
+9. Uso autorizado en el taller, segundo intento con nueva autorización rechazado, sin otro descuento de puntos.
+10. El beneficio sigue en **Utilizados y vencidos**, marcado **Consumido · quema simulada**, sin un QR reutilizable.
+11. Migración de un estado anterior sin saldo USDT ni compras: añade 20.000 USDT de prueba y conserva cuenta, puntos y cupón usado.
+12. Las cuatro vistas (`marketplace`, `club`, `recompensas`, `taller`) revisadas a 360, 390, 768 y 1.978 px: 16 combinaciones sin desbordamiento horizontal ni imágenes locales rotas.
+13. Perfil móvil: el celular y la información de wallet ocupan filas separadas. La pestaña de compras muestra el comprobante y los totales sin desbordamiento.
 
-Las capturas corresponden al frontend ejecutado, no a maquetas generadas. Se revisaron visualmente escritorio, móvil, Mi club y recompensas.
+Capturas del frontend ejecutado: [escritorio](preview-desktop.jpg), [móvil](preview-mobile.jpg), [club](preview-club.jpg), [club móvil](preview-mobile-club.jpg), [recompensas](preview-rewards.jpg), [compra](preview-checkout.jpg) y [beneficio](preview-benefit.jpg). La foto ilustrativa del mantenimiento se generó con imagegen; las capturas muestran la aplicación real.
 
-## Límites de esta verificación
+## Límites
 
-Se verifica una demo local. No hay autenticación de producción, creación de wallet, pagos, contratos o transacciones de Base Sepolia que probar. Los roles y autorizaciones del taller son simulados. No se validó disponibilidad comercial de Kiden en Bolivia ni la aprobación de las recompensas por las marcas.
+Es una demo local. No hay autenticación de producción, verificación de celular o correo, creación de wallet, fondos reales, pagos, contratos o transacciones de Base Sepolia. Los roles, la autorización del taller y la quema se simulan. Disponibilidad comercial de Kiden en Bolivia y aprobación de las recompensas pendientes.

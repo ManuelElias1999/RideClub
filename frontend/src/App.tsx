@@ -19,6 +19,10 @@ import {
   type ActivityKind,
 } from "./data/catalog";
 import {
+  buy,
+  fundDemo,
+  id,
+  type Purchase,
   credit,
   initialDemo,
   loadDemo,
@@ -34,6 +38,7 @@ import {
 import Marketplace, { BikeDetail } from "./components/Marketplace";
 import Rewards, { RewardDetail } from "./components/Rewards";
 import Club, { CouponDialog } from "./components/Club";
+import Checkout from "./components/Checkout";
 import Auth from "./components/Auth";
 import Workshop from "./components/Workshop";
 import { BrandLogo, Modal } from "./components/ui";
@@ -51,6 +56,13 @@ export default function App() {
   const [page, setPage] = useState<Page>(getPage);
   const [filter, setFilter] = useState<Brand | "Todas">("Todas");
   const [menu, setMenu] = useState(false);
+  const [authMode, setAuthMode] = useState<"login" | "register">("register");
+  const [checkout, setCheckout] = useState<{
+    bike: Bike;
+    operationId: string;
+  }>();
+  const [purchase, setPurchase] = useState<Purchase>();
+  const [purchaseError, setPurchaseError] = useState("");
   const [auth, setAuth] = useState(false);
   const [created, setCreated] = useState<Account>();
   const [authError, setAuthError] = useState("");
@@ -114,7 +126,8 @@ export default function App() {
     setMenu(false);
     window.scrollTo({ top: 0, behavior: "instant" });
   }
-  function openAuth() {
+  function openAuth(mode: "login" | "register" = "register") {
+    setAuthMode(mode);
     setAuthError("");
     setCreated(undefined);
     setReward(undefined);
@@ -264,11 +277,11 @@ export default function App() {
         <div className="header-actions">
           <button
             className="account-button"
-            onClick={account ? () => navigate("club") : openAuth}
+            onClick={account ? () => navigate("club") : () => openAuth("login")}
           >
             <UserRound size={18} />
             <span>
-              {account ? account.name.split(" ")[0] : "Únete al club"}
+              {account ? account.name.split(" ")[0] : "Iniciar sesión"}
             </span>
             <ArrowUpRight size={16} />
           </button>
@@ -291,7 +304,7 @@ export default function App() {
             onFavorite={onFavorite}
             onBike={setBike}
             onRewards={() => rewardNavigate()}
-            onJoin={account ? () => navigate("club") : openAuth}
+            onJoin={account ? () => navigate("club") : () => openAuth()}
           />
         )}
         {page === "recompensas" && (
@@ -319,6 +332,10 @@ export default function App() {
             onBike={setBike}
             onCopy={copy}
             onBrand={rewardNavigate}
+            onFund={() => {
+              if (apply((s) => fundDemo(s, account!.id)))
+                setToast("Se añadieron 20.000 USDT de prueba a tu saldo.");
+            }}
           />
         )}
         {page === "taller" && (
@@ -364,7 +381,7 @@ export default function App() {
           </div>
           <button
             className="footer-join"
-            onClick={account ? () => navigate("club") : openAuth}
+            onClick={account ? () => navigate("club") : () => openAuth()}
           >
             Nos vemos en el camino.
             <strong>
@@ -395,9 +412,47 @@ export default function App() {
         <BikeDetail
           bike={bike}
           onClose={() => setBike(undefined)}
+          onBuy={(b) => {
+            setBike(undefined);
+            if (!account) {
+              openAuth("login");
+              return;
+            }
+            setPurchase(undefined);
+            setPurchaseError("");
+            setCheckout({ bike: b, operationId: id() });
+          }}
           onReward={(b) => {
             setBike(undefined);
             rewardNavigate(b);
+          }}
+        />
+      )}
+      {checkout && account && (
+        <Checkout
+          bike={checkout.bike}
+          account={account}
+          purchase={purchase}
+          error={purchaseError}
+          onClose={() => setCheckout(undefined)}
+          onClub={() => {
+            setCheckout(undefined);
+            navigate("club");
+          }}
+          onConfirm={() => {
+            try {
+              const result = buy(
+                stateRef.current,
+                account.id,
+                checkout.bike.id,
+                checkout.operationId,
+              );
+              commit(result.state);
+              setPurchase(result.purchase);
+              setPurchaseError("");
+            } catch (e) {
+              setPurchaseError((e as Error).message);
+            }
           }}
         />
       )}
@@ -424,6 +479,7 @@ export default function App() {
       )}
       {auth && (
         <Auth
+          initialMode={authMode}
           onClose={() => {
             setAuth(false);
             if (created) navigate("club");
@@ -516,10 +572,11 @@ export default function App() {
           </p>
           <h4>Qué puedes probar</h4>
           <p className="fine-print">
-            Registro local por correo, referido de 8 dígitos, favoritas, puntos
-            por marca, canje con QR y validación de un solo uso. La demo de
-            Manuel empieza con 1.000 puntos Zontes; las cuentas nuevas empiezan
-            con cero.
+            Registro local por correo y celular, referido de 8 dígitos, compras
+            con USDT de prueba, favoritas, puntos por marca, canje con QR y
+            validación de un solo uso. La demo de Manuel empieza con 1.000
+            puntos Zontes; las cuentas nuevas empiezan con cero puntos y 20.000
+            USDT ficticios para probar compras.
           </p>
           <h4>Siguiente etapa</h4>
           <p className="fine-print">

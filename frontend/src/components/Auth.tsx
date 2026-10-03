@@ -8,7 +8,7 @@ import {
   Wallet,
   LogIn,
 } from "lucide-react";
-import { brands, type Brand } from "../data/catalog";
+import { phoneRegions, type PhoneInput } from "../lib/phone";
 import type { Account } from "../lib/demo";
 import { Modal } from "./ui";
 export default function Auth({
@@ -18,25 +18,34 @@ export default function Auth({
   onDemo,
   created,
   error,
+  initialMode = "register",
 }: {
   onClose: () => void;
-  onRegister: (name: string, email: string, brand: Brand, code: string) => void;
+  onRegister: (
+    name: string,
+    email: string,
+    phone: PhoneInput,
+    code: string,
+  ) => void;
   onLogin: (email: string) => void;
   onDemo: () => void;
   created?: Account;
   error: string;
+  initialMode?: "register" | "login";
 }) {
-  const [login, setLogin] = useState(false);
+  const [login, setLogin] = useState(initialMode === "login");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [brand, setBrand] = useState<Brand>("Zontes");
+  const [region, setRegion] = useState("BO");
+  const [phone, setPhone] = useState("");
+  const country = phoneRegions.find((r) => r.code === region)!;
   const [code, setCode] = useState(
     () => new URLSearchParams(window.location.search).get("ref") ?? "",
   );
   function submit(e: FormEvent) {
     e.preventDefault();
     if (login) onLogin(email);
-    else onRegister(name, email, brand, code);
+    else onRegister(name, email, { region, number: phone }, code);
   }
   return (
     <Modal
@@ -66,7 +75,7 @@ export default function Auth({
               <Check size={18} /> Perfil y número de referido creados
             </span>
             <span>
-              <Check size={18} /> Marca elegida: {created.brand}
+              <Check size={18} /> Celular: {created.phone}
             </span>
             <span>
               <Wallet size={18} /> Wallet preparada para Base Sepolia
@@ -94,7 +103,7 @@ export default function Auth({
               className={login ? "active" : ""}
               onClick={() => setLogin(true)}
             >
-              Ya tengo cuenta
+              Iniciar sesión
             </button>
           </div>
           <p className="auth-description">
@@ -135,16 +144,45 @@ export default function Auth({
             {!login && (
               <>
                 <label>
-                  Tu marca
+                  Región
                   <select
-                    aria-label="Tu marca"
-                    value={brand}
-                    onChange={(e) => setBrand(e.target.value as Brand)}
+                    aria-label="Región"
+                    value={region}
+                    onChange={(e) => setRegion(e.target.value)}
+                    autoComplete="country"
                   >
-                    {brands.map((b) => (
-                      <option key={b}>{b}</option>
+                    {phoneRegions.map((r) => (
+                      <option key={r.code} value={r.code}>
+                        {r.name} ({r.prefix})
+                      </option>
                     ))}
                   </select>
+                </label>
+                <label>
+                  Número de celular
+                  <div className="phone-input">
+                    <span>{country.prefix}</span>
+                    <input
+                      type="tel"
+                      autoComplete="tel-national"
+                      inputMode="tel"
+                      value={phone}
+                      onChange={(e) =>
+                        setPhone(e.target.value.replace(/\D/g, ""))
+                      }
+                      minLength={country.min}
+                      maxLength={country.max}
+                      pattern={`[0-9]{${country.min},${country.max}}`}
+                      placeholder={
+                        region === "BO" ? "70000000" : "Número sin prefijo"
+                      }
+                      required
+                    />
+                  </div>
+                  <small>
+                    Ingresa el número sin {country.prefix}. No se envía SMS en
+                    esta demo.
+                  </small>
                 </label>
                 <label>
                   Número de referido <span className="optional">Opcional</span>

@@ -28,6 +28,7 @@ export function CouponDialog({
   onClose: () => void;
   onWorkshop: (coupon: Coupon) => void;
 }) {
+  const [showQR, setShowQR] = useState(false);
   const [qr, setQr] = useState("");
   const [failed, setFailed] = useState(false);
   useEffect(() => {
@@ -52,27 +53,56 @@ export function CouponDialog({
   return (
     <Modal title="Tu beneficio RideClub" onClose={onClose}>
       <div className="coupon-dialog">
+        <div className={`nft-art ${coupon.usedAt ? "consumed" : ""}`}>
+          <img
+            src="/assets/maintenance-benefit.webp"
+            alt="Mecánico realizando mantenimiento a una moto"
+          />
+          <div>
+            <span>RIDECLUB / BENEFICIO NFT · DEMO</span>
+            <strong>{coupon.title}</strong>
+            <small>
+              {coupon.brand} · #{coupon.id.slice(-8)}
+            </small>
+          </div>
+          {coupon.usedAt && <b>CONSUMIDO · QUEMA SIMULADA</b>}
+        </div>
         <BrandLogo brand={coupon.brand} />
         <span className={`status-pill ${coupon.usedAt ? "used" : ""}`}>
           {coupon.usedAt ? "Utilizado" : expired ? "Vencido" : "Disponible"}
         </span>
         <h3>{coupon.title}</h3>
         <span className="fine-print">
-          Cupón de demostración · NFT pendiente de integración
+          Tarjeta de beneficio de un solo uso · NFT real pendiente
         </span>
         {!coupon.usedAt && !expired && (
           <>
-            {qr ? (
-              <img className="qr" src={qr} alt={`QR del cupón ${coupon.id}`} />
-            ) : (
-              <p>
-                {failed
-                  ? "Usa el código del cupón para validar."
-                  : "Preparando QR…"}
-              </p>
-            )}
+            <button
+              className="button secondary full qr-toggle"
+              onClick={() => setShowQR(!showQR)}
+              aria-expanded={showQR}
+            >
+              {showQR
+                ? "Ocultar QR de validación"
+                : "Mostrar QR para el taller"}
+            </button>
+            {showQR &&
+              (qr ? (
+                <img
+                  className="qr"
+                  src={qr}
+                  alt={`QR del cupón ${coupon.id}`}
+                />
+              ) : (
+                <p>
+                  {failed
+                    ? "Usa el código del cupón para validar."
+                    : "Preparando QR…"}
+                </p>
+              ))}
             <p>
-              Muestra este QR en el taller participante.
+              Muestra tu beneficio en el taller participante. Abre el QR al
+              validar el servicio.
               <br />
               <small>
                 El cliente debe autorizar el uso y el taller validarlo.
@@ -120,8 +150,9 @@ export function CouponDialog({
           </button>
         )}
         <p className="fine-print">
-          El QR identifica este cupón local. La validación y quema real del NFT
-          se conectarán al backend.
+          El QR identifica el beneficio; no es el NFT. Al confirmar el servicio,
+          se consume una sola vez. La quema del NFT real se conectará al backend
+          y quedará un comprobante en tu historial.
         </p>
       </div>
     </Modal>
@@ -138,6 +169,7 @@ export default function Club({
   onBike,
   onCopy,
   onBrand,
+  onFund,
 }: {
   account?: Account;
   state: Demo;
@@ -149,6 +181,7 @@ export default function Club({
   onBike: (b: Bike) => void;
   onCopy: (v: string) => void;
   onBrand: (b: Brand) => void;
+  onFund: () => void;
 }) {
   const [tab, setTab] = useState("benefits");
   const [used, setUsed] = useState(false);
@@ -205,6 +238,23 @@ export default function Club({
         </div>
         <button className="button secondary small" onClick={onLogout}>
           <LogOut size={16} /> Salir de la demo
+        </button>
+      </div>
+      <div className="demo-wallet-bar">
+        <div className="wallet-heading">
+          <Wallet size={25} />
+          <span>
+            USDT DE PRUEBA
+            <strong>
+              {fmt(account.balanceUSDT)} <small>USDT</small>
+            </strong>
+          </span>
+        </div>
+        <p>
+          Tu saldo para probar compras. Cada moto suma 1.000 puntos de su marca.
+        </p>
+        <button className="button secondary small" onClick={onFund}>
+          Recargar 20.000 USDT demo
         </button>
       </div>
       <div className="club-dashboard">
@@ -274,8 +324,8 @@ export default function Club({
           </div>
           <h3>{account.name}</h3>
           <p>{account.email}</p>
-          <span className="profile-brand">
-            <BrandLogo brand={account.brand} />
+          <span className="profile-phone">
+            {account.phone ?? "Celular pendiente de agregar"}
           </span>
           <hr />
           <span className="eyebrow">TU WALLET</span>
@@ -296,6 +346,7 @@ export default function Club({
         {[
           ["benefits", "Mis beneficios", Ticket],
           ["activity", "Actividad", Clock],
+          ["purchases", "Mis compras", Wallet],
           ["favorites", "Favoritas", Heart],
           ["referrals", "Referidos", Users],
         ].map(([key, label, Icon]) => {
@@ -356,7 +407,11 @@ export default function Club({
                         : "Disponible"}
                   </span>
                 </div>
-                <Ticket size={31} />
+                <img
+                  className="benefit-thumbnail"
+                  src="/assets/maintenance-benefit.webp"
+                  alt="Mantenimiento de moto"
+                />
                 <h3>{c.title}</h3>
                 <p>
                   {c.usedAt
@@ -364,7 +419,7 @@ export default function Club({
                     : `Válido hasta ${date(c.expiresAt)}`}
                 </p>
                 <span className="text-link">
-                  Ver cupón
+                  Ver beneficio
                   <ArrowUpRight size={16} />
                 </span>
               </button>
@@ -385,6 +440,45 @@ export default function Club({
               onClick={onRewards}
             />
           )}
+        </>
+      )}
+      {tab === "purchases" && (
+        <>
+          <SectionHead
+            eyebrow="TU GARAGE EMPIEZA AQUÍ"
+            title="Tus compras de prueba."
+          />
+          <div className="purchase-list">
+            {state.purchases
+              .filter((p) => p.ownerId === account.id)
+              .map((p) => (
+                <article className="purchase-row" key={p.id}>
+                  <img
+                    src={bikes.find((b) => b.id === p.bikeId)?.image}
+                    alt={`${p.brand} ${p.model}`}
+                  />
+                  <div>
+                    <strong>
+                      {p.brand} {p.model}
+                    </strong>
+                    <span>{date(p.createdAt)} · Compra simulada</span>
+                    <code>{p.id}</code>
+                  </div>
+                  <div className="purchase-totals">
+                    <strong>{fmt(p.amountUSDT)} USDT demo</strong>
+                    <span>
+                      +{fmt(p.points)} puntos {p.brand}
+                    </span>
+                  </div>
+                </article>
+              ))}
+            {!state.purchases.some((p) => p.ownerId === account.id) && (
+              <Empty
+                title="Tu primera compra te espera."
+                text="Elige una moto con precio en el marketplace y usa tu saldo de prueba."
+              />
+            )}
+          </div>
         </>
       )}
       {tab === "activity" && (
@@ -445,8 +539,8 @@ export default function Club({
             <span>
               Registrarse no acredita puntos automáticamente.
               <small>
-                El administrador debe confirmar una compra válida para premiar
-                al rider que invitó.
+                La primera compra de prueba acredita 200 puntos al rider que
+                invitó. En producción, la tienda confirmará la compra.
               </small>
             </span>
           </div>
@@ -458,7 +552,7 @@ export default function Club({
                 </div>
                 <div>
                   <strong>{a.name}</strong>
-                  <span>Marca elegida: {a.brand}</span>
+                  <span>Registrado con tu número de referido</span>
                 </div>
                 <span className="status-pill">
                   {state.activities.some(

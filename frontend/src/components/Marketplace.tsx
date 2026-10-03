@@ -104,10 +104,12 @@ export function BikeDetail({
   bike,
   onClose,
   onReward,
+  onBuy,
 }: {
   bike: Bike;
   onClose: () => void;
   onReward: (brand: Brand) => void;
+  onBuy: (bike: Bike) => void;
 }) {
   return (
     <Modal title={`${bike.brand} ${bike.name}`} onClose={onClose} wide>
@@ -125,7 +127,8 @@ export function BikeDetail({
           </div>
           <p className="fine-print">
             {bike.region}. Precio de referencia, sujeto a confirmación
-            comercial. Esta demo no procesa compras.
+            comercial. Las compras de prueba usan saldo ficticio y no reservan
+            una moto.
           </p>
           <dl className="spec-grid">
             {bike.specs.map(([k, v]) => (
@@ -145,6 +148,14 @@ export function BikeDetail({
               </small>
             </span>
           </div>
+          {bike.price && (
+            <button
+              className="button primary full purchase-button"
+              onClick={() => onBuy(bike)}
+            >
+              Comprar con USDT de prueba <ArrowRight size={17} />
+            </button>
+          )}
           <ExternalLink href={bike.source}>
             Consultar modelo en la tienda
           </ExternalLink>
