@@ -94,6 +94,8 @@ export default function App() {
   const presentationClientRef = useRef<string | null>(null);
   const presentationAdminRef = useRef<string | null>(null);
   const storageSync = useRef(false);
+  const mainRef = useRef<HTMLElement>(null);
+  const initialPageRef = useRef(true);
   stateRef.current = state;
   const [page, setPage] = useState<Page>(getPage);
   const [filter, setFilter] = useState<Brand | "Todas">("Todas");
@@ -352,6 +354,11 @@ export default function App() {
     if (window.location.hash !== "#catalogo")
       window.scrollTo({ top: 0, behavior: "instant" });
     document.title = `RideClub — ${page === "inicio" ? "Motos, puntos y beneficios" : page === "marketplace" ? "Marketplace" : page === "club" ? "Mi club" : page === "taller" ? "Taller demo" : page === "recompensas" ? "Recompensas" : "Administración"}`;
+    if (initialPageRef.current) {
+      initialPageRef.current = false;
+    } else {
+      window.requestAnimationFrame(() => mainRef.current?.focus());
+    }
   }, [page]);
   const staff = account?.role === "admin" || account?.role === "company";
   const demoClient = state.accounts.find(
@@ -729,6 +736,7 @@ export default function App() {
             <button
               key={p}
               className={page === p ? "active" : ""}
+              aria-current={page === p ? "page" : undefined}
               onClick={() => navigate(p as Page)}
             >
               {label}
@@ -809,7 +817,7 @@ export default function App() {
             </small>
           </div>
         )}
-      <main id="main">
+      <main id="main" ref={mainRef} tabIndex={-1}>
         {page === "inicio" && (
           <Landing
             onMarketplace={() => {

@@ -370,13 +370,16 @@ export default function Workshop({
       </SectionHead>
       <div className="table-wrap">
         <table>
+          <caption className="sr-only">
+            Historial reciente de puntos acreditados a clientes
+          </caption>
           <thead>
             <tr>
-              <th>Cliente</th>
-              <th>Actividad</th>
-              <th>Marca</th>
-              <th>Puntos</th>
-              <th>Fecha</th>
+              <th scope="col">Cliente</th>
+              <th scope="col">Actividad</th>
+              <th scope="col">Marca</th>
+              <th scope="col">Puntos</th>
+              <th scope="col">Fecha</th>
             </tr>
           </thead>
           <tbody>

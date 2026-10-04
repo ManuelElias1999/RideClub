@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useId, useRef, type ReactNode } from "react";
 import { X, ArrowUpRight, Wrench, Package, Sparkles } from "lucide-react";
 import { type Brand, type Reward } from "../data/catalog";
 import { useCatalog } from "../data/CatalogContext";
@@ -98,12 +98,15 @@ export function Modal({
   wide?: boolean;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const titleId = useId();
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
   useEffect(() => {
     const d = ref.current;
     const previous = document.activeElement as HTMLElement | null;
     d?.showModal();
+    closeButtonRef.current?.focus();
     document.body.classList.add("modal-open");
     return () => {
       d?.close();
@@ -131,11 +134,14 @@ export function Modal({
             onClose();
         }
       }}
-      aria-labelledby="modal-title"
+      aria-labelledby={titleId}
+      aria-modal="true"
     >
       <header className="modal-header">
-        <h2 id="modal-title">{title}</h2>
+        <h2 id={titleId}>{title}</h2>
         <button
+          ref={closeButtonRef}
+          type="button"
           className="icon-button"
           onClick={onClose}
           aria-label="Cerrar diálogo"

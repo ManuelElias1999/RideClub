@@ -5,7 +5,7 @@ Fecha: 3 de octubre de 2026. Actualización de frontend y backend Supabase.
 ## Comprobaciones de código
 
 - `npm run build`: TypeScript y compilación Vite completadas.
-- `npm test`: veintidós pruebas Vitest completadas.
+- `npm test`: veinticinco pruebas Vitest completadas.
 - `git diff --check`: sin errores de espacios.
 - `npx supabase test db`: prueba de esquema disponible en `supabase/tests/database.test.sql`; requiere Docker/Supabase CLI y se ejecuta después de `supabase db reset`.
 
@@ -31,11 +31,22 @@ Chromium headless con Playwright. Resultado: **PASS**, sin errores de JavaScript
 
 14. Exportación CSV permitida desde la cuenta administradora; el selector de clientes excluye a administradores.
 
+## Accesibilidad
+
+- Enlace visible al enfocarse para saltar directamente al contenido principal.
+- Foco visible en enlaces, botones, campos y selectores.
+- El cambio de vista mueve el foco al contenido nuevo sin alterar la navegación durante una actualización Realtime.
+- Los diálogos nativos reciben el foco, se cierran con `Escape`, anuncian un título único y lo devuelven al control que los abrió.
+- Navegación principal con `aria-current`; formularios con etiquetas; errores y confirmaciones con regiones `alert`/`status`.
+- Tablas administrativas, CSV y taller con descripción accesible y encabezados de columna.
+- Animaciones y desplazamiento desactivados cuando el sistema solicita movimiento reducido.
+- Imágenes informativas con texto alternativo y controles de icono con nombre accesible.
+
 Capturas del frontend ejecutado: [registro con marca](preview-registration.jpg), [escritorio](preview-desktop.jpg), [móvil](preview-mobile.jpg), [club](preview-club.jpg), [club móvil](preview-mobile-club.jpg), [recompensas](preview-rewards.jpg), [compra](preview-checkout.jpg) y [beneficio](preview-benefit.jpg). La foto ilustrativa del mantenimiento se generó con imagegen; las capturas muestran la aplicación real.
 
 ## Backend
 
-Con las variables de Supabase configuradas, el registro e ingreso usan correo, los datos son compartidos y la separación de roles se aplica con RLS y funciones transaccionales. El esquema de pruebas comprueba tablas, funciones, RLS y el seed. En este entorno no estaba disponible Docker ni Supabase CLI, por lo que la migración debe ejecutarse localmente con los comandos de [BACKEND.md](BACKEND.md) antes del despliegue.
+Con las variables de Supabase configuradas, el registro e ingreso usan correo, los datos son compartidos y la separación de roles se aplica con RLS y funciones transaccionales. El esquema de pruebas comprueba tablas, funciones, RLS y el seed. Supabase Cron ejecuta diariamente el vencimiento de puntos a las 04:00 UTC (medianoche de Bolivia), aunque ningún cliente abra la aplicación. En este entorno no estaba disponible Docker ni Supabase CLI, por lo que la migración debe ejecutarse localmente con los comandos de [BACKEND.md](BACKEND.md) antes del despliegue.
 
 ## Límites
 

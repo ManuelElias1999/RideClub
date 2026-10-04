@@ -1,6 +1,6 @@
 begin;
 
-select plan(23);
+select plan(24);
 
 select has_table('public', 'companies', 'companies existe');
 select has_table('public', 'profiles', 'profiles existe');
@@ -16,6 +16,7 @@ select has_function('public', 'redeem_reward', array['uuid'], 'canje transaccion
 select has_function('public', 'credit_activity', array['uuid', 'uuid', 'activity_kind', 'text', 'boolean'], 'acreditación existe');
 select has_function('public', 'use_coupon', array['text', 'text', 'boolean'], 'uso de cupón existe');
 select has_function('public', 'manage_company', array['uuid', 'text', 'text', 'text', 'text', 'text', 'text', 'company_status'], 'gestión de empresa existe');
+select has_function('private', 'expire_all_points', array[]::text[], 'vencimiento automático existe');
 
 select ok((select relrowsecurity from pg_class where oid = 'public.profiles'::regclass), 'RLS en perfiles');
 select ok((select relrowsecurity from pg_class where oid = 'public.purchases'::regclass), 'RLS en compras');

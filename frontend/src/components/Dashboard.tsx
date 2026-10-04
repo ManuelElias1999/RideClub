@@ -1443,10 +1443,11 @@ function Table({
   return (
     <div className="dashboard-table-scroll">
       <table className="dashboard-table">
+        <caption className="sr-only">{headings.join(", ")}</caption>
         <thead>
           <tr>
             {headings.map((h) => (
-              <th key={h}>{h}</th>
+              <th key={h} scope="col">{h}</th>
             ))}
           </tr>
         </thead>
@@ -1869,7 +1870,8 @@ function ClientCsvImport({
             {!!parsed.rows.length && (
               <div className="table-wrap csv-preview">
                 <table>
-                  <thead><tr><th>Fila</th><th>Cliente</th><th>Correo</th><th>Empresa</th><th>Estado</th><th>Acción</th></tr></thead>
+                  <caption className="sr-only">Vista previa de clientes que se importarán</caption>
+                  <thead><tr><th scope="col">Fila</th><th scope="col">Cliente</th><th scope="col">Correo</th><th scope="col">Empresa</th><th scope="col">Estado</th><th scope="col">Acción</th></tr></thead>
                   <tbody>
                     {parsed.rows.slice(0, 25).map((row) => (
                       <tr key={`${row.row}-${row.email}`}>
