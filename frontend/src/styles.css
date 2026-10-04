@@ -4438,14 +4438,6 @@ main {
 .marketplace-brand-selector small { overflow: hidden; color: #788374; font-size: 8px; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
 .all-brands-mark { display: grid !important; flex: 0 0 auto; place-items: center; width: 39px; height: 39px; border-radius: 50%; color: #172019; background: #c6f46a; font-size: 20px; font-weight: 900; }
 .marketplace-result-label { margin: 0; color: #687564; font-size: 10px; }
-.bike-company-identity { display: flex; align-items: center; gap: 14px; min-height: 67px; padding: 11px 17px; border-bottom: 1px solid color-mix(in srgb, var(--brand-accent) 30%, #e5e9e0); background: linear-gradient(105deg, color-mix(in srgb, var(--brand-accent) 23%, white), #fff 76%); }
-.bike-company-identity .brand-logo { flex: 0 0 auto; width: 80px; height: 30px; object-position: left center; }
-.bike-company-identity .brand-logo.niu { width: 58px; }
-.bike-company-identity span { min-width: 0; padding-left: 13px; border-left: 1px solid color-mix(in srgb, var(--brand-accent) 36%, #dfe4d9); }
-.bike-company-identity strong,
-.bike-company-identity small { display: block; }
-.bike-company-identity strong { color: #253122; font-size: 10px; }
-.bike-company-identity small { overflow: hidden; margin-top: 3px; color: #71806c; font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
 
 @media (max-width: 1100px) {
   .business-shell { grid-template-columns: 205px minmax(0, 1fr); }
@@ -4483,7 +4475,6 @@ main {
   .marketplace-brand-selector { display: flex; overflow-x: auto; gap: 9px; margin-right: -20px; padding: 2px 20px 9px 0; scroll-snap-type: x proximity; }
   .marketplace-brand-selector > button { flex: 0 0 210px; min-height: 70px; scroll-snap-align: start; }
   .marketplace-result-label { display: none; }
-  .bike-company-identity { min-height: 62px; }
   .business-heading .button { margin-top: 13px; }
   .business-filters { align-items: stretch; flex-direction: column; }
   .dashboard-demo-label { margin: 0; padding: 0; }
@@ -4500,4 +4491,114 @@ main {
   .landing-brand-grid { grid-template-columns: 1fr; }
   .landing-brand-card > h3 { min-height: 0; }
   .landing-brand-actions { flex-direction: column; }
+}
+
+/* Wallet y marketplace blockchain mockup */
+.wallet-address {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 3px 12px;
+  min-width: 220px;
+  padding: 11px 14px;
+  border: 1px solid #ccdabd;
+  border-radius: 7px;
+  color: #263322;
+  background: #ffffffb8;
+  text-align: left;
+}
+.wallet-address span { grid-column: 1 / -1; color: #708066; font-size: 7px; font-weight: 750; letter-spacing: .1em; }
+.wallet-address code { font-size: 11px; }
+.wallet-address svg { align-self: center; color: #62883b; }
+.token-wallet-title { margin: 19px 0 4px; color: #fff; font-size: 28px; letter-spacing: -.04em; }
+.brand-balances { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px; margin: 23px 0; }
+.brand-balances > button {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 7px;
+  min-height: 100px;
+  padding: 12px !important;
+  border: 1px solid #ffffff19 !important;
+  border-radius: 7px;
+  background: #ffffff09;
+}
+.brand-balances > button + button { border-left: 1px solid #ffffff19; }
+.brand-balances .brand-logo { grid-column: 1 / -1; height: 19px; }
+.brand-balances > button > span { grid-column: 1 / -1; color: #99aa8c; font-size: 8px; }
+.brand-balances strong { font-size: 20px; font-weight: 650; }
+.brand-balances > button > svg { align-self: center; }
+.profile-wallet-address {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  margin-top: 10px;
+  padding: 8px 10px;
+  border: 1px solid #dce4d6;
+  border-radius: 5px;
+  color: #506149;
+  background: #f8faf5;
+}
+.profile-wallet-address code { min-width: 0; overflow: hidden; font-size: 8px; text-overflow: ellipsis; }
+
+.marketplace-showrooms { display: grid; gap: 30px; }
+.brand-showroom {
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--brand-accent) 52%, #dce3d7);
+  border-radius: 13px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--brand-accent) 10%, white), #f9fbf7 230px);
+  box-shadow: 0 22px 55px color-mix(in srgb, var(--brand-accent) 13%, transparent);
+}
+.showroom-header {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 28px;
+  overflow: hidden;
+  min-height: 145px;
+  padding: 27px 31px;
+  color: #172019;
+  background:
+    radial-gradient(circle at 78% 0, color-mix(in srgb, var(--brand-accent) 60%, transparent), transparent 32%),
+    linear-gradient(115deg, color-mix(in srgb, var(--brand-accent) 45%, white), color-mix(in srgb, var(--brand-accent) 13%, white));
+  border-bottom: 6px solid var(--brand-accent);
+}
+.showroom-header:after {
+  content: "RIDECLUB";
+  position: absolute;
+  right: 20px;
+  bottom: -26px;
+  color: #ffffff52;
+  font-size: clamp(50px, 7vw, 94px);
+  font-weight: 900;
+  letter-spacing: -.07em;
+  pointer-events: none;
+}
+.showroom-identity, .showroom-token { position: relative; z-index: 1; display: flex; align-items: center; gap: 16px; }
+.showroom-logo { display: grid; place-items: center; width: 130px; height: 68px; padding: 13px; border-radius: 9px; background: #fffffff0; box-shadow: 0 10px 25px #26341417; }
+.showroom-logo .brand-logo { width: 100px; height: 38px; }
+.showroom-identity small, .showroom-token > span { display: block; font-size: 7px; font-weight: 750; letter-spacing: .11em; }
+.showroom-identity h2 { margin: 7px 0 0; max-width: 390px; font-size: 23px; line-height: 1.1; }
+.showroom-token { padding: 12px 15px; border: 1px solid #ffffffa8; border-radius: 7px; background: #ffffff8c; }
+.showroom-token strong { display: block; margin-top: 4px; font-size: 12px; letter-spacing: 0; }
+.showroom-link { position: relative; z-index: 2; display: flex; align-items: center; gap: 6px; padding: 10px 13px; border: 1px solid #26351f2b; border-radius: 5px; background: #fff; font-size: 9px; font-weight: 750; }
+.showroom-grid { padding: 24px; }
+.bike-brand-badge { position: absolute; z-index: 3; left: 15px; bottom: 14px; display: grid; place-items: center; width: 92px; height: 38px; padding: 7px 10px; border-radius: 5px; background: #ffffffe8; box-shadow: 0 7px 20px #24321c1a; }
+.bike-brand-badge .brand-logo { width: 70px; height: 23px; }
+
+@media (max-width: 900px) {
+  .showroom-header { grid-template-columns: 1fr auto; }
+  .showroom-token { display: none; }
+}
+@media (max-width: 680px) {
+  .wallet-address { order: 3; width: 100%; }
+  .brand-balances { grid-template-columns: 1fr; }
+  .brand-balances > button { min-height: 82px; }
+  .showroom-header { display: flex; align-items: flex-start; flex-direction: column; gap: 16px; padding: 21px; }
+  .showroom-identity { align-items: flex-start; flex-direction: column; }
+  .showroom-logo { width: 105px; height: 54px; }
+  .showroom-identity h2 { font-size: 19px; }
+  .showroom-link { align-self: stretch; justify-content: center; }
+  .showroom-grid { padding: 14px; }
 }

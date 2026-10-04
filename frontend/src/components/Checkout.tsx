@@ -48,7 +48,7 @@ export default function Checkout({
         {purchase ? (
           <div className="purchase-success">
             <Check size={24} />
-            <strong>¡Ya tienes {fmt(purchasePoints)} puntos más!</strong>
+            <strong>¡Se mintearon {fmt(purchasePoints)} {bike.brand} Token!</strong>
           </div>
         ) : (
           <p>Prueba el recorrido completo con tu saldo USDT de demostración.</p>
@@ -77,13 +77,13 @@ export default function Checkout({
           <div>
             <dt>
               <Coins size={16} />{" "}
-              {purchase ? "Puntos acreditados" : "Ganas con esta compra"}
+              {purchase ? "Tokens minteados" : "Recibes con esta compra"}
             </dt>
             <dd>+{fmt(purchasePoints)} {bike.brand}</dd>
           </div>
           {purchase && (
             <div>
-              <dt>Nuevo saldo de puntos</dt>
+              <dt>Saldo de {bike.brand} Token</dt>
               <dd>
                 {fmt(account.points[bike.brand] ?? 0)} {bike.brand}
               </dd>
@@ -97,8 +97,9 @@ export default function Checkout({
           </p>
         )}
         <p className="fine-print">
-          USDT ficticio para probar el frontend. No se envía dinero, no se
-          reserva una moto ni se realiza una transacción en blockchain.
+          Flujo blockchain simulado: el USDT demo se transfiere a la empresa y
+          la wallet operadora mintea los tokens de la marca. No se mueve dinero
+          real ni se reserva una moto.
         </p>
         <button
           className="button primary full"

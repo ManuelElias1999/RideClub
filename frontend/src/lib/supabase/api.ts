@@ -1,6 +1,7 @@
 import type { Bike, Reward, ActivityKind } from "../../data/catalog";
 import {
   defaultPointRules,
+  mockWalletAddress,
   type Account,
   type Company,
   type Coupon,
@@ -155,7 +156,11 @@ export async function loadBackendState(): Promise<Demo> {
       referredBy: row.referred_by_profile_id
         ? referralCodeById.get(row.referred_by_profile_id)
         : undefined,
-      wallet: { status: "pending", chainId: row.wallet_chain_id },
+      wallet: {
+        status: "ready",
+        chainId: row.wallet_chain_id,
+        address: row.wallet_address ?? mockWalletAddress(row.id),
+      },
       points: Object.fromEntries(companies.map((company) => [company.name, balances.find((item) => item.profile_id === row.id && item.company_id === company.id)?.balance ?? 0])),
       favorites: favorites.filter((item) => item.profile_id === row.id).map((item) => item.bike_id), status: row.status,
     };
@@ -175,7 +180,11 @@ export async function loadBackendState(): Promise<Demo> {
       balanceUSDT: 0,
       code: "",
       referredBy: currentAccount?.code,
-      wallet: { status: "pending", chainId: 84532 },
+      wallet: {
+        status: "ready",
+        chainId: 84532,
+        address: mockWalletAddress(referral.id),
+      },
       points: Object.fromEntries(companies.map((company) => [company.name, 0])),
       favorites: [],
       status: "active",

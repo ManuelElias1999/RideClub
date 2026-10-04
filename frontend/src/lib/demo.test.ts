@@ -98,7 +98,8 @@ describe("RideClub demo lifecycle", () => {
     const ana = s.accounts[1];
     expect(ana.email).toBe("ana@example.com");
     expect(ana.code).toMatch(/^\d{8}$/);
-    expect(ana.wallet.status).toBe("pending");
+    expect(ana.wallet.status).toBe("ready");
+    expect(ana.wallet.address).toMatch(/^0x[0-9a-f]{40}$/);
     expect(ana.points.NIU).toBe(0);
     s = register(s, "Luis", "luis@example.com", phone, "", "NIU");
     expect(s.accounts[2].code).not.toBe(ana.code);

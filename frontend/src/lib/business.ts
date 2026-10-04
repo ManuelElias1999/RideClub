@@ -3,6 +3,7 @@ import {
   defaultPointRules,
   demoFunding,
   id,
+  mockWalletAddress,
   type Account,
   type Company,
   type Demo,
@@ -256,7 +257,11 @@ export function saveClient(
         createdAt: new Date().toISOString(),
         balanceUSDT: demoFunding,
         code: uniqueCode(state),
-        wallet: { status: "pending", chainId: 84532 },
+        wallet: {
+          status: "ready",
+          chainId: 84532,
+          address: mockWalletAddress(email),
+        },
         points: Object.fromEntries(
           state.companies.map((company) => [company.name, 0]),
         ),

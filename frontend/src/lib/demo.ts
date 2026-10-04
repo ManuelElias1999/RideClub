@@ -31,7 +31,7 @@ export type Account = {
   balanceUSDT: number;
   code: string;
   referredBy?: string;
-  wallet: { status: "pending"; chainId: 84532 };
+  wallet: { status: "ready" | "pending"; chainId: 84532; address?: string };
   points: Record<Brand, number>;
   favorites: string[];
   status?: "active" | "blocked" | "deleted";
@@ -117,6 +117,18 @@ export type Demo = {
     date: string;
   }[];
 };
+export function mockWalletAddress(seedValue: string): string {
+  let seed = 2166136261;
+  for (const character of seedValue) {
+    seed = Math.imul(seed ^ character.charCodeAt(0), 16777619) >>> 0;
+  }
+  let address = "";
+  for (let index = 0; index < 5; index += 1) {
+    seed = Math.imul(seed ^ (index + 1), 2246822519) >>> 0;
+    address += seed.toString(16).padStart(8, "0");
+  }
+  return `0x${address.slice(0, 40)}`;
+}
 const seed: Account = {
   id: "demo-rider",
   name: "Manuel",
@@ -126,7 +138,11 @@ const seed: Account = {
   phone: "+59170000000",
   balanceUSDT: demoFunding,
   code: "10002026",
-  wallet: { status: "pending", chainId: 84532 },
+  wallet: {
+    status: "ready",
+    chainId: 84532,
+    address: mockWalletAddress("demo-rider"),
+  },
   points: { Zontes: 1000, NIU: 0, Kiden: 0 },
   favorites: [],
   status: "active",
@@ -204,7 +220,11 @@ export function register(
     balanceUSDT: demoFunding,
     code,
     referredBy: referredBy || undefined,
-    wallet: { status: "pending", chainId: 84532 },
+    wallet: {
+      status: "ready",
+      chainId: 84532,
+      address: mockWalletAddress(email),
+    },
     points: Object.fromEntries(state.companies.map((c) => [c.name, 0])),
     favorites: [],
     status: "active",
@@ -241,7 +261,11 @@ export function login(state: Demo, email: string): Demo {
       code,
       points: Object.fromEntries(state.companies.map((c) => [c.name, 0])),
       favorites: [],
-      wallet: { status: "pending", chainId: 84532 },
+      wallet: {
+        status: "ready",
+        chainId: 84532,
+        address: mockWalletAddress(email),
+      },
     };
     return {
       ...state,
@@ -561,6 +585,11 @@ export function loadDemo(): Demo {
           companies,
           accounts: s.accounts.map((a: Account) => ({
             ...a,
+            wallet: {
+              status: "ready",
+              chainId: 84532,
+              address: a.wallet.address ?? mockWalletAddress(a.id || a.email),
+            },
             brand: companies.some((c) => c.name === a.brand)
               ? a.brand
               : undefined,

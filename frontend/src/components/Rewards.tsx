@@ -33,7 +33,7 @@ export default function Rewards({
       <div className="page-intro">
         <span className="eyebrow">BIENVENIDO AL LADO BUENO DE RODAR</span>
         <h1>
-          {selectedCompany ? `Tus puntos ${filter}.` : "Tus puntos."}
+          {selectedCompany ? `Tus tokens ${filter}.` : "Tus tokens."}
           <br />
           <em>
             {selectedCompany
@@ -44,24 +44,22 @@ export default function Rewards({
         <p>
           Cuida tu moto, completa tu equipo y vuelve al camino.
           <br />
-          Canjea los puntos de cada marca por beneficios de un solo uso.
+          Quema tokens de cada marca y recibe un NFT de beneficio de un solo uso.
         </p>
       </div>
       <div className="rewards-summary">
         <div>
           <Coins size={23} />
           <span>
-            {account
-              ? `Tienes ${fmt(Object.values(account.points).reduce((sum, p) => sum + p, 0))} puntos en tu club`
-              : "Únete al club y empieza a sumar puntos"}
-            <small>Los puntos se acumulan y canjean por marca.</small>
+            {account ? "Tokens disponibles en tu wallet" : "Beneficios por marca"}
+            <small>Cada saldo pertenece a un token distinto.</small>
           </span>
         </div>
         {account ? (
           <div className="balance-chips">
             {brands.map((b) => (
               <span key={b}>
-                {b}
+                {b} Token
                 <strong>{fmt(account.points[b])}</strong>
               </span>
             ))}
@@ -71,14 +69,6 @@ export default function Rewards({
             Crear cuenta <ArrowUpRight size={17} />
           </button>
         )}
-      </div>
-      <div className="proposal-note">
-        <Ticket size={18} />
-        <span>
-          <strong>Catálogo de beneficios propuesto para la hackathon.</strong>{" "}
-          Condiciones, puntos y cupos de demostración; sujetos a aprobación de
-          cada marca.
-        </span>
       </div>
       <SectionHead eyebrow="ALGO BUENO TE ESPERA" title="Elige tu beneficio.">
         <span className="count-label">Canje único / cupón digital</span>
@@ -103,7 +93,7 @@ export default function Rewards({
           <div>
             <span className="eyebrow">BENEFICIOS {filter.toUpperCase()}</span>
             <h2>{selectedCompany.subtitle}</h2>
-            <p>Estos puntos y beneficios pertenecen exclusivamente al ecosistema {filter}.</p>
+            <p>Estos tokens y beneficios pertenecen exclusivamente al ecosistema {filter}.</p>
           </div>
           <BrandLogo brand={filter} />
         </div>
@@ -155,7 +145,7 @@ export default function Rewards({
                   <div className="reward-bottom">
                     <strong>
                       <Coins size={19} />
-                      {fmt(r.points)} <small>puntos</small>
+                      {fmt(r.points)} <small>{r.brand} Token</small>
                     </strong>
                     <button
                       className="button small dark"
@@ -204,19 +194,19 @@ export function RewardDetail({
         <div>
           <span>Costo del beneficio</span>
           <strong>
-            {fmt(reward.points)} puntos {reward.brand}
+            {fmt(reward.points)} {reward.brand} Token
           </strong>
         </div>
         {account && (
           <>
             <div>
               <span>Tu saldo disponible</span>
-              <strong>{fmt(balance)} puntos</strong>
+              <strong>{fmt(balance)} {reward.brand} Token</strong>
             </div>
             <div>
               <span>Saldo después del canje</span>
               <strong>
-                {fmt(Math.max(0, balance - reward.points))} puntos
+                {fmt(Math.max(0, balance - reward.points))} {reward.brand} Token
               </strong>
             </div>
           </>
@@ -249,7 +239,7 @@ export function RewardDetail({
       )}
       {account && balance < reward.points && (
         <p className="form-error">
-          Te faltan {fmt(reward.points - balance)} puntos {reward.brand}.
+          Te faltan {fmt(reward.points - balance)} {reward.brand} Token.
         </p>
       )}
       <button
@@ -258,7 +248,7 @@ export function RewardDetail({
         onClick={account ? onConfirm : onJoin}
       >
         {account
-          ? `Confirmar canje · ${fmt(reward.points)} puntos`
+          ? `Quemar ${fmt(reward.points)} tokens y mintear NFT`
           : "Únete al club para canjear"}
         <ArrowRight size={18} />
       </button>

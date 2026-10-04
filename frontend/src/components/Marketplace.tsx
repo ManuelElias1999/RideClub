@@ -11,6 +11,7 @@ import {
   Wrench,
   Users,
   Gift,
+  Coins,
 } from "lucide-react";
 import { type Brand, type Bike } from "../data/catalog";
 import { useCatalog } from "../data/CatalogContext";
@@ -33,14 +34,10 @@ export function BikeCard({
       className="bike-card brand-product-card"
       style={{ "--brand-accent": identity?.color ?? "#c6f46a" } as CSSProperties}
     >
-      <div className="bike-company-identity">
-        <BrandLogo brand={bike.brand} />
-        <span>
-          <strong>{bike.brand}</strong>
-          <small>{identity?.subtitle ?? "Empresa RideClub"}</small>
-        </span>
-      </div>
       <div className="bike-image">
+        <span className="bike-brand-badge">
+          <BrandLogo brand={bike.brand} />
+        </span>
         <span
           className={`category-tag ${bike.brand === "NIU" ? "electric" : ""}`}
         >
@@ -154,7 +151,7 @@ export function BikeDetail({
             <span>
               Tu próxima compra puede darte{" "}
               <strong>
-                {fmt(purchaseRule?.points ?? 1000)} puntos {bike.brand}
+                {fmt(purchaseRule?.points ?? 1000)} {bike.brand} Token
               </strong>
               .
               <small>
@@ -228,6 +225,9 @@ export default function Marketplace({
           ? a.name.localeCompare(b.name)
           : 0,
     );
+  const showroomBrands = brands.filter((brand) =>
+    visible.some((bike) => bike.brand === brand),
+  );
   return (
     <div
       className={`marketplace-page ${selectedCompany ? "brand-context-page" : ""}`}
@@ -331,16 +331,49 @@ export default function Marketplace({
             </select>
           </label>
         </div>
-        <div className="bike-grid">
-          {visible.map((b) => (
-            <BikeCard
-              key={b.id}
-              bike={b}
-              favorite={favorites.includes(b.id)}
-              onFavorite={() => onFavorite(b.id)}
-              onOpen={() => onBike(b)}
-            />
-          ))}
+        <div className="marketplace-showrooms">
+          {showroomBrands.map((brand) => {
+            const company = brandInfo[brand];
+            const brandBikes = visible.filter((bike) => bike.brand === brand);
+            return (
+              <section
+                className="brand-showroom"
+                key={brand}
+                style={{ "--brand-accent": company.color } as CSSProperties}
+              >
+                <header className="showroom-header">
+                  <div className="showroom-identity">
+                    <span className="showroom-logo"><BrandLogo brand={brand} /></span>
+                    <span>
+                      <small>SHOWROOM OFICIAL RIDECLUB</small>
+                      <h2>{company.subtitle}</h2>
+                    </span>
+                  </div>
+                  <div className="showroom-token">
+                    <Coins size={18} />
+                    <span>
+                      TOKEN DE LA MARCA
+                      <strong>{brand} Token</strong>
+                    </span>
+                  </div>
+                  <button className="showroom-link" onClick={() => setFilter(brand)}>
+                    {brandBikes.length} modelos <ArrowRight size={15} />
+                  </button>
+                </header>
+                <div className="bike-grid showroom-grid">
+                  {brandBikes.map((bike) => (
+                    <BikeCard
+                      key={bike.id}
+                      bike={bike}
+                      favorite={favorites.includes(bike.id)}
+                      onFavorite={() => onFavorite(bike.id)}
+                      onOpen={() => onBike(bike)}
+                    />
+                  ))}
+                </div>
+              </section>
+            );
+          })}
         </div>
         {visible.length === 0 && (
           <div className="empty-state">
@@ -392,14 +425,14 @@ export default function Marketplace({
           <div>
             <span>02</span>
             <Wrench size={21} />
-            <h3>Suma puntos</h3>
-            <p>Por compras, mantenimientos y referidos confirmados.</p>
+            <h3>Recibe tokens</h3>
+            <p>Tokens separados por compras, mantenimientos y referidos.</p>
           </div>
           <div>
             <span>03</span>
             <Gift size={21} />
             <h3>Disfruta</h3>
-            <p>Canjea por un cupón y úsalo una vez en la tienda o taller.</p>
+            <p>Quema tokens, recibe un NFT y úsalo una vez en la empresa.</p>
           </div>
         </div>
       </section>

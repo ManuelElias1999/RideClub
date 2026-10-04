@@ -75,7 +75,7 @@ export function CouponDialog({
         </span>
         <h3>{coupon.title}</h3>
         <span className="fine-print">
-          Tarjeta de beneficio de un solo uso · NFT real pendiente
+          NFT de beneficio de un solo uso · estado simulado en Base Sepolia
         </span>
         {!coupon.usedAt && !expired && (
           <>
@@ -123,7 +123,7 @@ export function CouponDialog({
             <dd>{date(coupon.expiresAt)}</dd>
           </div>
           <div>
-            <dt>Puntos utilizados</dt>
+            <dt>Tokens quemados</dt>
             <dd>
               {fmt(coupon.points)} {coupon.brand}
             </dd>
@@ -152,9 +152,9 @@ export function CouponDialog({
           </button>
         )}
         <p className="fine-print">
-          El QR identifica el beneficio; no es el NFT. Al confirmar el servicio,
-          se consume una sola vez. La quema del NFT real se conectará en la
-          etapa blockchain y quedará un comprobante en tu historial.
+          El QR representa el NFT de esta demostración. Al confirmar el
+          servicio, la empresa cambia su estado de válido a consumido y queda
+          un comprobante permanente en tu historial.
         </p>
       </div>
     </Modal>
@@ -206,7 +206,7 @@ export default function Club({
           con <em>ser parte.</em>
         </h1>
         <p>
-          Crea tu cuenta y encuentra tus puntos, beneficios y referidos en un
+          Crea tu cuenta y encuentra tus tokens, beneficios y referidos en un
           solo lugar.
         </p>
         <button className="button primary" onClick={onJoin}>
@@ -215,7 +215,7 @@ export default function Club({
         </button>
         <div className="join-perks">
           <span>
-            <Coins size={20} /> Puntos por marca
+            <Coins size={20} /> Tokens por marca
           </span>
           <span>
             <Gift size={20} /> Beneficios exclusivos
@@ -252,15 +252,24 @@ export default function Club({
         <div className="wallet-heading">
           <Wallet size={25} />
           <span>
-            USDT DE PRUEBA
+            WALLET DEMO CONECTADA
             <strong>
               {fmt(account.balanceUSDT)} <small>USDT</small>
             </strong>
           </span>
         </div>
-        <p>
-          Tu saldo para probar compras. Cada empresa define cuántos puntos entrega y cuándo vencen.
-        </p>
+        <button
+          className="wallet-address"
+          onClick={() => onCopy(account.wallet.address ?? "")}
+          title="Copiar dirección"
+        >
+          <span>BASE SEPOLIA · 84532</span>
+          <code>
+            {account.wallet.address?.slice(0, 8)}…{account.wallet.address?.slice(-6)}
+          </code>
+          <Copy size={15} />
+        </button>
+        <p>El USDT y los tokens de lealtad se muestran como activos separados.</p>
         <button className="button secondary small" onClick={onFund}>
           Recargar 20.000 USDT demo
         </button>
@@ -268,24 +277,20 @@ export default function Club({
       <div className="club-dashboard">
         <div className="points-panel">
           <div className="points-top">
-            <span className="eyebrow">TU SALDO RIDECLUB</span>
+            <span className="eyebrow">TUS TOKENS POR MARCA</span>
             <Coins size={22} />
           </div>
-          <strong className="points-total">
-            {fmt(Object.values(account.points).reduce((sum, p) => sum + p, 0))}
-            <small>puntos</small>
-          </strong>
-          <p>Tu próxima recompensa está más cerca.</p>
+          <h2 className="token-wallet-title">Activos de lealtad</h2>
+          <p>Cada marca tiene su propio token. Los saldos nunca se mezclan.</p>
           <div className="brand-balances">
             {allCompanies
               .map((c) => c.name)
               .map((b) => (
                 <button key={b} onClick={() => onBrand(b)}>
                   <BrandLogo brand={b} />
-                  <strong>
-                    {fmt(account.points[b])}
-                    <ArrowUpRight size={14} />
-                  </strong>
+                  <span>{b} Token</span>
+                  <strong>{fmt(account.points[b])}</strong>
+                  <ArrowUpRight size={14} />
                 </button>
               ))}
           </div>
@@ -294,7 +299,7 @@ export default function Club({
             <ArrowRight size={17} />
           </button>
           <span className="points-note">
-            Puntos de demo separados por marca.
+            Tokens demo separados por contrato y empresa.
           </span>
         </div>
         <div className="referral-panel">
@@ -307,7 +312,7 @@ export default function Club({
           </h2>
           <p>
             Comparte tu número. Por un referido confirmado, puedes ganar{" "}
-            <strong>{referralRule?.points ?? 200} puntos</strong>.
+            <strong>{referralRule?.points ?? 200} tokens</strong>.
           </p>
           <button
             className="ref-copy"
@@ -340,12 +345,19 @@ export default function Club({
           <div className="wallet-status">
             <Wallet size={21} />
             <span>
-              Base Sepolia<small>Creación automática pendiente</small>
+              Base Sepolia<small>Wallet demo activa · chain 84532</small>
             </span>
           </div>
+          <button
+            className="profile-wallet-address"
+            onClick={() => onCopy(account.wallet.address ?? "")}
+          >
+            <code>{account.wallet.address}</code>
+            <Copy size={14} />
+          </button>
           <p className="fine-print">
-            Tu perfil está preparado para crear una wallet con tu correo en la
-            siguiente etapa de integración blockchain.
+            Esta dirección demo se crea junto con tu cuenta y se mantiene
+            estable para representar tus activos blockchain.
           </p>
           <span className="demo-badge">Cuenta de demostración</span>
           <div className="profile-affiliation">
@@ -473,7 +485,7 @@ export default function Club({
               text={
                 used
                   ? "Los cupones utilizados o vencidos se conservarán en esta sección."
-                  : "Canjea tus puntos y encuentra aquí tus cupones disponibles."
+                  : "Quema tus tokens y encuentra aquí tus NFTs disponibles."
               }
               onClick={onRewards}
             />
@@ -505,7 +517,7 @@ export default function Club({
                   <div className="purchase-totals">
                     <strong>{fmt(p.amountUSDT)} USDT demo</strong>
                     <span>
-                      +{fmt(p.points)} puntos {p.brand}
+                      +{fmt(p.points)} {p.brand} Token
                     </span>
                   </div>
                 </article>
@@ -575,10 +587,10 @@ export default function Club({
           <div className="notice">
             <Users size={24} />
             <span>
-              Registrarse no acredita puntos automáticamente.
+              Registrarse no acredita tokens automáticamente.
               <small>
-                La primera compra de prueba acredita {referralRule?.points ?? 200} puntos al rider que
-                invitó. Esos puntos vencen en {referralRule?.expiryDays ?? 365} días.
+                La primera compra de prueba mintea {referralRule?.points ?? 200} tokens al rider que
+                invitó. Esos tokens vencen en {referralRule?.expiryDays ?? 365} días.
               </small>
             </span>
           </div>
@@ -670,7 +682,7 @@ function ActivityRow({ activity: a }: { activity: Activity }) {
       <strong className={a.points > 0 ? "positive" : ""}>
         {a.points > 0 ? "+" : ""}
         {fmt(a.points)}
-        <small> puntos</small>
+        <small> {a.brand} Token</small>
       </strong>
     </div>
   );
