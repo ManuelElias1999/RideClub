@@ -8,8 +8,6 @@
 [![Backend](https://img.shields.io/badge/Backend-Supabase-3ecf8e?style=for-the-badge)](#arquitectura-técnica)
 [![Blockchain](https://img.shields.io/badge/Blockchain-Prototipo_Base_Sepolia-0052ff?style=for-the-badge)](#blockchain-y-web3)
 
-![RideClub en escritorio](docs/preview-desktop.jpg)
-
 ## Índice
 
 1. [Explicación en un minuto](#explicación-en-un-minuto)
