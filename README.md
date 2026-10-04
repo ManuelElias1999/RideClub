@@ -57,6 +57,8 @@ npm run dev -- --host 127.0.0.1
 - Marca visible y editable en Mi club. Las cuentas anteriores conservan su marca; si no tenían una, pueden vincularla desde el perfil sin perder saldos ni compras.
 - Prevención de duplicados de referencias por marca y de recompensas repetidas al mismo referido.
 - Diseño responsive, diálogos nativos, navegación por teclado y reducción de movimiento.
+- API segura para CRM/facturación: sincroniza clientes, expone catálogo y compras por empresa y registra ventas externas idempotentes con acreditación automática de puntos.
+- Configuración de despliegue HTTPS en Vercel, cabeceras de seguridad y guía de respaldos, recuperación y monitoreo.
 
 ## Recorrido de demo
 
@@ -98,9 +100,11 @@ Todavía no incluye contratos, fondos reales, creación de wallets, tokens ni NF
 
 ## Clientes existentes y roles
 
-El alta manual, la autenticación y los roles ya se gestionan en el backend. La integración con CRM o bases comerciales externas permanece como trabajo posterior. Los administradores y empresas solo se asignan desde operaciones privilegiadas; un registro público siempre crea un cliente.
+El alta manual, la autenticación y los roles ya se gestionan en el backend. También existe una API genérica de servidor para conectar CRM o facturación sin acceso directo a la base; falta configurar las credenciales y el mapeo del proveedor real. Los administradores y empresas solo se asignan desde operaciones privilegiadas; un registro público siempre crea un cliente.
 
-[Plan de integración con clientes existentes](docs/CUSTOMER_INTEGRATION.md): identidad verificada, asociación por marca, identificación del cliente externo, permisos y sincronización sin duplicar movimientos.
+[Integración de clientes existentes](docs/CUSTOMER_INTEGRATION.md) · [Contrato de la API](docs/INTEGRATION_API.md) · [Despliegue, respaldo y operación](docs/OPERATIONS.md).
+
+[Matriz de requisitos no funcionales](docs/NON_FUNCTIONAL_REQUIREMENTS.md): seguridad, escalabilidad, integración, disponibilidad y mantenibilidad con evidencia y pasos de validación.
 
 ## Datos de las marcas
 

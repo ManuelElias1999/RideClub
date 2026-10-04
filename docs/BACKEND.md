@@ -41,9 +41,11 @@ supabase/
     20261004030000_realtime.sql
     20261004033000_balance_guard.sql
     20261004043000_scheduled_expiry.sql
+    20261004053000_integration_api.sql
   functions/
     bootstrap-admin/
     manage-user/
+    integration-api/
     _shared/
   tests/database.test.sql
   seed.sql
@@ -129,9 +131,10 @@ No ejecutes estos comandos hasta decidir publicar el backend:
 npx supabase login
 npx supabase link --project-ref TU_PROJECT_REF
 npx supabase db push
-npx supabase secrets set BOOTSTRAP_SECRET=UN_SECRETO_LARGO_Y_UNICO
+npx supabase secrets set BOOTSTRAP_SECRET=UN_SECRETO_LARGO_Y_UNICO INTEGRATION_API_KEY=OTRO_SECRETO_LARGO_Y_UNICO
 npx supabase functions deploy manage-user
 npx supabase functions deploy bootstrap-admin --no-verify-jwt
+npx supabase functions deploy integration-api --no-verify-jwt
 ```
 
 Después:
@@ -142,6 +145,8 @@ Después:
 4. Guarda cada empresa desde Administración para crear o sincronizar su usuario de acceso.
 5. Añade a la plataforma de hosting `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY`; nunca expongas la service role key en variables `VITE_*`.
 6. Tras crear el administrador, rota el secreto de bootstrap o elimina esa Edge Function del proyecto remoto.
+
+La API de conexión con CRM/facturación, sus rutas y pruebas están en [INTEGRATION_API.md](INTEGRATION_API.md). El despliegue público, las cabeceras, los respaldos y el procedimiento de recuperación están en [OPERATIONS.md](OPERATIONS.md).
 
 ## Recorrido funcional recomendado
 

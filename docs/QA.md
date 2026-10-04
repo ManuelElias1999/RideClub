@@ -50,4 +50,4 @@ Con las variables de Supabase configuradas, el registro e ingreso usan correo, l
 
 ## Límites
 
-No hay verificación de celular, creación de wallet, fondos reales, pagos, contratos ni transacciones de Base Sepolia. La autorización criptográfica del taller y la quema on-chain todavía no existen; el consumo de cupón sí se impide en el backend. La base de clientes externa todavía no está conectada. Disponibilidad comercial de Kiden en Bolivia y aprobación de las recompensas pendientes.
+No hay verificación de celular, creación de wallet, fondos reales, pagos, contratos ni transacciones de Base Sepolia. La autorización criptográfica del taller y la quema on-chain todavía no existen; el consumo de cupón sí se impide en el backend. Existe una API genérica para clientes y compras externas, pero falta adaptarla y autorizarla contra el CRM real de cada empresa. Disponibilidad comercial de Kiden en Bolivia y aprobación de las recompensas pendientes.
