@@ -2290,6 +2290,7 @@ main {
   gap: 26px;
   margin-bottom: 45px;
 }
+.workshop-explanation { margin: -4px 0 4px; padding: 11px 13px; border-left: 3px solid #9ac752; background: #f4f8ed; color: #5f7058; }
 .panel {
   background: #fff;
   border: 1px solid #e0e7d5;

@@ -59,6 +59,18 @@ export default function Workshop({
   const activeRules =
     allCompanies.find((company) => company.name === brand)?.pointRules ??
     allCompanies[0]?.pointRules;
+  const referenceExample =
+    kind === "Mantenimiento"
+      ? "Ej. ORDEN-TALLER-2026-002"
+      : kind === "Referido"
+        ? "Ej. REFERIDO-COMPRA-002"
+        : "Ej. EVENTO-OCTUBRE-002";
+  const clientLabel =
+    kind === "Referido"
+      ? "Cliente referido que realizó su compra"
+      : kind === "Evento"
+        ? "Cliente que asistió"
+        : "Cliente que recibió el servicio";
   const creditSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (await onCredit(client, brand, kind, ref, confirmed)) {
@@ -137,11 +149,16 @@ export default function Workshop({
             <Coins size={24} />
             <div>
               <span className="eyebrow">CADA ACTIVIDAD SUMA</span>
-              <h2>Acreditar puntos</h2>
+              <h2>Registrar actividad y sumar puntos</h2>
             </div>
           </div>
+          <p className="fine-print workshop-explanation">
+            Usa este formulario cuando la empresa verifica una actividad que
+            ocurrió fuera de la página, como un mantenimiento, un referido o
+            un evento. Las compras de motos suman puntos automáticamente.
+          </p>
           <label>
-            Cliente
+            {clientLabel}
             <select
               aria-label="Cliente"
               value={client}
@@ -181,8 +198,8 @@ export default function Workshop({
                   ))}
               </select>
               <small>
-                Los puntos por compra se acreditan automáticamente en el
-                checkout y no se registran aquí.
+                Selecciona qué actividad comprobó la empresa. El valor se toma
+                de las reglas de puntos configuradas para {brand}.
               </small>
             </label>
           </div>
@@ -200,7 +217,7 @@ export default function Workshop({
             </p>
           )}
           <label>
-            Referencia de actividad
+            Código único de respaldo
             <input
               value={ref}
               onChange={(e) => {
@@ -210,10 +227,12 @@ export default function Workshop({
               required
               minLength={3}
               maxLength={80}
-              placeholder="Ej. FACTURA-2026-002"
+              placeholder={referenceExample}
             />
             <small>
-              Una referencia solo puede acreditarse una vez por marca.
+              Puede ser el número de orden del taller, registro del evento o
+              comprobante interno. No tiene que ser una factura. Cada código
+              solo puede utilizarse una vez por marca para evitar duplicados.
             </small>
           </label>
           <label className="checkbox-field">
@@ -223,7 +242,7 @@ export default function Workshop({
               onChange={(e) => setConfirmed(e.target.checked)}
               required
             />
-            <span>La actividad está confirmada por la tienda.</span>
+            <span>Confirmo que la empresa verificó esta actividad.</span>
           </label>
           {creditResult && (
             <p role="status" className="form-success">
@@ -232,7 +251,7 @@ export default function Workshop({
             </p>
           )}
           <button className="button dark full" type="submit">
-            Acreditar puntos de demo
+            Sumar +{fmt(activeRules?.[kind].points ?? 0)} {brand} Token
             <Coins size={18} />
           </button>
         </form>

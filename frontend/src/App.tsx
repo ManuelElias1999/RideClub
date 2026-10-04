@@ -262,11 +262,13 @@ export default function App() {
         return undefined;
       }
     };
-    const { data } = supabaseClient().auth.onAuthStateChange((event) => {
+    const { data } = supabaseClient().auth.onAuthStateChange(() => {
       window.setTimeout(() => {
         void (async () => {
-          const next = await refresh();
-          if (event === "SIGNED_IN") enterAuthenticatedArea(next);
+          // Supabase can emit SIGNED_IN again when a tab regains focus or the
+          // session is refreshed. Updating the data must not move the user away
+          // from Marketplace, Rewards, Workshop, or the page they chose.
+          await refresh();
         })();
       }, 0);
     });
