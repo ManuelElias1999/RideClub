@@ -241,6 +241,7 @@ export default function App() {
       }
     };
     const refresh = async () => {
+      if (presentationClientRef.current) return stateRef.current;
       try {
         const next = applyPresentationCompany(await loadBackendState());
         if (active) commit(next);
