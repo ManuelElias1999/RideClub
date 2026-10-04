@@ -37,7 +37,8 @@ import {
   type Demo,
 } from "./lib/demo";
 import { CatalogProvider } from "./data/CatalogContext";
-import { manageBrand, readBusiness } from "./lib/business";
+import { manageBrand, readBusiness, saveClient } from "./lib/business";
+import type { ClientImportOutcome, ClientImportRow } from "./lib/clientCsv";
 import Dashboard from "./components/Dashboard";
 import Marketplace, { BikeDetail } from "./components/Marketplace";
 import Rewards, { RewardDetail } from "./components/Rewards";
@@ -51,6 +52,7 @@ import { normalizePhone } from "./lib/phone";
 import { supabaseClient, supabaseEnabled } from "./lib/supabase/client";
 import {
   backendApi,
+  importBackendClients,
   loadBackendState,
   logoutBackend,
   requestLogin,
@@ -305,6 +307,50 @@ export default function App() {
   const dashboardPage: Page = account?.role === "company" ? "empresa" : "admin";
   const dashboardProps = {
     state,
+    onImportClients: async (
+      rows: ClientImportRow[],
+    ): Promise<ClientImportOutcome[]> => {
+      const existingEmails = new Set(
+        stateRef.current.accounts.map((item) => item.email.toLowerCase()),
+      );
+      if (supabaseEnabled) {
+        const outcomes = await importBackendClients(rows, existingEmails);
+        await refreshBackend();
+        return outcomes;
+      }
+      let next = stateRef.current;
+      const outcomes: ClientImportOutcome[] = [];
+      for (const row of rows) {
+        const existing = next.accounts.find(
+          (item) => item.role === "client" && item.email.toLowerCase() === row.email,
+        );
+        try {
+          next = saveClient(
+            next,
+            {
+              name: row.name,
+              email: row.email,
+              phone: row.phone,
+              brand: row.companyName,
+              status: row.status,
+            },
+            existing?.id,
+          );
+          outcomes.push({
+            ...row,
+            result: existing ? "updated" : "created",
+          });
+        } catch (error) {
+          outcomes.push({
+            ...row,
+            result: "error",
+            message: (error as Error).message,
+          });
+        }
+      }
+      commit(next);
+      return outcomes;
+    },
     onMutation: async (fn: (s: Demo) => Demo): Promise<string | null> => {
       try {
         const before = stateRef.current;

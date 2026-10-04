@@ -10,6 +10,7 @@ import {
   type Purchase,
 } from "../demo";
 import type { BikeDraft, ClientDraft, CompanyDraft, RewardDraft } from "../business";
+import type { ClientImportOutcome, ClientImportRow } from "../clientCsv";
 import { supabaseClient } from "./client";
 
 const toDbKind: Record<ActivityKind, string> = {
@@ -84,6 +85,38 @@ export async function requestLogin(email: string) {
 export async function logoutBackend() {
   const { error } = await supabaseClient().auth.signOut();
   fail(error);
+}
+
+export async function importBackendClients(
+  rows: ClientImportRow[],
+  existingEmails: Set<string>,
+): Promise<ClientImportOutcome[]> {
+  const client = supabaseClient();
+  const outcomes: ClientImportOutcome[] = [];
+  for (const row of rows) {
+    const existed = existingEmails.has(row.email);
+    const result = await client.functions.invoke("manage-user", {
+      body: {
+        email: row.email,
+        fullName: row.name,
+        phone: row.phone ?? null,
+        companyId: row.companyId,
+        role: "client",
+        status: row.status,
+      },
+    });
+    if (result.error || result.data?.error) {
+      outcomes.push({
+        ...row,
+        result: "error",
+        message: result.data?.error ?? result.error?.message ?? "No se pudo importar.",
+      });
+    } else {
+      outcomes.push({ ...row, result: existed ? "updated" : "created" });
+      existingEmails.add(row.email);
+    }
+  }
+  return outcomes;
 }
 
 export async function loadBackendState(): Promise<Demo> {

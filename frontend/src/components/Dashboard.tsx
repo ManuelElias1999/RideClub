@@ -30,6 +30,8 @@ import {
   UserPlus,
   TrendingUp,
   CalendarClock,
+  FileUp,
+  FileSpreadsheet,
 } from "lucide-react";
 import type {
   Account,
@@ -55,6 +57,13 @@ import {
   type BusinessView,
 } from "../lib/business";
 import { BrandLogo, date, fmt, Modal } from "./ui";
+import {
+  clientCsvTemplate,
+  parseClientCsv,
+  type ClientImportOutcome,
+  type ClientImportParseResult,
+  type ClientImportRow,
+} from "../lib/clientCsv";
 type Tab =
   | "overview"
   | "companies"
@@ -97,11 +106,13 @@ const pointRuleLabels: Record<keyof PointRuleSet, string> = {
 export default function Dashboard({
   state,
   onMutation,
+  onImportClients,
   onLogout,
   onWorkshop,
 }: {
   state: Demo;
   onMutation: Mutation;
+  onImportClients: (rows: ClientImportRow[]) => Promise<ClientImportOutcome[]>;
   onLogout: () => void;
   onWorkshop: () => void;
 }) {
@@ -117,6 +128,7 @@ export default function Dashboard({
   const [editor, setEditor] = useState<Editor>();
   const [customer, setCustomer] = useState<Account>();
   const [message, setMessage] = useState("");
+  const [clientImport, setClientImport] = useState(false);
   const view = readBusiness(state, global ? brand || undefined : own?.name, {
     from,
     to,
@@ -743,13 +755,22 @@ export default function Dashboard({
                     label="Buscar clientes"
                   />
                   {(global || own) && (
-                    <button
-                      className="button primary small"
-                      disabled={!writable}
-                      onClick={() => setEditor({ kind: "client" })}
-                    >
-                      <UserPlus size={16} /> Registrar cliente
-                    </button>
+                    <>
+                      <button
+                        className="button secondary small"
+                        disabled={!writable}
+                        onClick={() => setClientImport(true)}
+                      >
+                        <FileUp size={16} /> Importar CSV
+                      </button>
+                      <button
+                        className="button primary small"
+                        disabled={!writable}
+                        onClick={() => setEditor({ kind: "client" })}
+                      >
+                        <UserPlus size={16} /> Registrar cliente
+                      </button>
+                    </>
                   )}
                 </div>
               }
@@ -1265,6 +1286,17 @@ export default function Dashboard({
           }
         />
       )}
+      {clientImport && (
+        <ClientCsvImport
+          companies={global ? state.companies : own ? [own] : []}
+          defaultCompany={global ? undefined : own}
+          existingEmails={new Set(
+            state.accounts.map((account) => account.email.toLowerCase()),
+          )}
+          onClose={() => setClientImport(false)}
+          onImport={onImportClients}
+        />
+      )}
       {editor?.kind === "rules" && (
         <PointRulesEditor
           company={editor.item}
@@ -1697,6 +1729,189 @@ function ImageField({
         </p>
       )}
     </div>
+  );
+}
+
+function ClientCsvImport({
+  companies,
+  defaultCompany,
+  existingEmails,
+  onClose,
+  onImport,
+}: {
+  companies: Company[];
+  defaultCompany?: Company;
+  existingEmails: Set<string>;
+  onClose: () => void;
+  onImport: (rows: ClientImportRow[]) => Promise<ClientImportOutcome[]>;
+}) {
+  const [fileName, setFileName] = useState("");
+  const [parsed, setParsed] = useState<ClientImportParseResult>();
+  const [outcomes, setOutcomes] = useState<ClientImportOutcome[]>();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  function downloadTemplate() {
+    const blob = new Blob(
+      ["\uFEFF" + clientCsvTemplate(defaultCompany?.name)],
+      { type: "text/csv;charset=utf-8" },
+    );
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `plantilla-clientes-${defaultCompany?.name.toLowerCase() ?? "rideclub"}.csv`;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  async function selectFile(file?: File) {
+    if (!file) return;
+    setError("");
+    setOutcomes(undefined);
+    if (!file.name.toLowerCase().endsWith(".csv")) {
+      setError("Selecciona un archivo con extensión .csv.");
+      return;
+    }
+    if (file.size > 1024 * 1024) {
+      setError("El CSV no puede superar 1 MB.");
+      return;
+    }
+    try {
+      const result = parseClientCsv(
+        await file.text(),
+        companies,
+        defaultCompany,
+      );
+      setFileName(file.name);
+      setParsed(result);
+    } catch {
+      setError("No se pudo leer el CSV. Descarga la plantilla y revisa su formato.");
+    }
+  }
+
+  async function runImport() {
+    if (!parsed?.rows.length) return;
+    setBusy(true);
+    setError("");
+    try {
+      setOutcomes(await onImport(parsed.rows));
+    } catch (importError) {
+      setError((importError as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const created = outcomes?.filter((item) => item.result === "created").length ?? 0;
+  const updated = outcomes?.filter((item) => item.result === "updated").length ?? 0;
+  const failed = outcomes?.filter((item) => item.result === "error").length ?? 0;
+  return (
+    <Modal title="Importar clientes desde CSV" onClose={onClose} wide>
+      <div className="csv-import">
+        <div className="csv-import-intro">
+          <FileSpreadsheet size={31} />
+          <div>
+            <h3>Sincroniza una base de clientes existente</h3>
+            <p>
+              Los correos nuevos crean perfiles confirmados sin enviar mensajes.
+              Los correos existentes actualizan sus datos y empresa vinculada.
+            </p>
+          </div>
+          <button className="button secondary small" onClick={downloadTemplate}>
+            <Download size={15} /> Descargar plantilla
+          </button>
+        </div>
+        <div className="csv-columns">
+          <strong>Columnas aceptadas</strong>
+          <code>nombre;correo;celular;empresa;estado</code>
+          <small>
+            {defaultCompany
+              ? `La columna empresa es opcional y todos los registros se asignarán a ${defaultCompany.name}.`
+              : "Empresa debe coincidir con el nombre de una empresa registrada."}
+            {" "}Estado: active, blocked o deleted. Celular en formato internacional.
+          </small>
+        </div>
+        {!outcomes && (
+          <label className="csv-dropzone">
+            <FileUp size={25} />
+            <span>{fileName || "Seleccionar archivo CSV"}</span>
+            <small>Máximo 250 filas y 1 MB · separador coma o punto y coma</small>
+            <input
+              type="file"
+              accept=".csv,text/csv"
+              onChange={(event) => void selectFile(event.target.files?.[0])}
+            />
+          </label>
+        )}
+        {parsed && !outcomes && (
+          <>
+            <div className="csv-import-summary">
+              <span className="valid"><strong>{parsed.rows.length}</strong> filas válidas</span>
+              <span className={parsed.issues.length ? "invalid" : ""}>
+                <strong>{parsed.issues.length}</strong> observaciones
+              </span>
+              <span><strong>{parsed.rows.filter((row) => existingEmails.has(row.email)).length}</strong> actualizaciones detectadas</span>
+            </div>
+            {!!parsed.rows.length && (
+              <div className="table-wrap csv-preview">
+                <table>
+                  <thead><tr><th>Fila</th><th>Cliente</th><th>Correo</th><th>Empresa</th><th>Estado</th><th>Acción</th></tr></thead>
+                  <tbody>
+                    {parsed.rows.slice(0, 25).map((row) => (
+                      <tr key={`${row.row}-${row.email}`}>
+                        <td>{row.row}</td>
+                        <td><strong>{row.name}</strong><small>{row.phone ?? "Sin celular"}</small></td>
+                        <td>{row.email}</td>
+                        <td>{row.companyName}</td>
+                        <td><ClientStatus status={row.status} /></td>
+                        <td>{existingEmails.has(row.email) ? "Actualizar" : "Crear"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {parsed.rows.length > 25 && <p className="fine-print">Se muestran 25 de {parsed.rows.length} filas válidas.</p>}
+              </div>
+            )}
+            {!!parsed.issues.length && (
+              <div className="csv-issues" role="alert">
+                <strong>Filas que no se importarán</strong>
+                <ul>
+                  {parsed.issues.slice(0, 20).map((issue) => (
+                    <li key={`${issue.row}-${issue.message}`}>Fila {issue.row}: {issue.message}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            <button
+              className="button primary full"
+              disabled={!parsed.rows.length || busy}
+              onClick={() => void runImport()}
+            >
+              {busy ? "Importando clientes…" : `Importar ${parsed.rows.length} clientes válidos`}
+            </button>
+          </>
+        )}
+        {outcomes && (
+          <div className="csv-result" role="status">
+            <Check size={32} />
+            <h3>Importación finalizada</h3>
+            <div className="csv-import-summary">
+              <span className="valid"><strong>{created}</strong> creados</span>
+              <span><strong>{updated}</strong> actualizados</span>
+              <span className={failed ? "invalid" : ""}><strong>{failed}</strong> rechazados</span>
+            </div>
+            {failed > 0 && (
+              <div className="csv-issues">
+                <ul>{outcomes.filter((item) => item.result === "error").map((item) => <li key={item.row}>Fila {item.row}: {item.message}</li>)}</ul>
+              </div>
+            )}
+            <p>Los clientes ya aparecen en el dashboard. La importación no envió ningún correo.</p>
+            <button className="button dark full" onClick={onClose}>Cerrar y ver clientes</button>
+          </div>
+        )}
+        {error && <p className="form-error" role="alert">{error}</p>}
+      </div>
+    </Modal>
   );
 }
 
