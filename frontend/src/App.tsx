@@ -89,6 +89,7 @@ export default function App() {
   });
   const stateRef = useRef(state);
   const presentationCompanyRef = useRef<string | null>(null);
+  const presentationClientRef = useRef<string | null>(null);
   const presentationAdminRef = useRef<string | null>(null);
   const storageSync = useRef(false);
   stateRef.current = state;
@@ -124,7 +125,18 @@ export default function App() {
   };
   const applyPresentationCompany = (next: Demo): Demo => {
     const companyId = presentationCompanyRef.current;
-    if (!companyId) return next;
+    if (!companyId) {
+      const clientId = presentationClientRef.current;
+      if (!clientId) return next;
+      const client = next.accounts.find(
+        (item) => item.id === clientId && item.role === "client" && item.status === "active",
+      );
+      if (!client) {
+        presentationClientRef.current = null;
+        return next;
+      }
+      return { ...next, currentId: client.id };
+    }
     const company = next.companies.find((item) => item.id === companyId);
     if (!company) {
       presentationCompanyRef.current = null;
@@ -304,6 +316,9 @@ export default function App() {
     document.title = `RideClub — ${page === "inicio" ? "Motos, puntos y beneficios" : page === "marketplace" ? "Marketplace" : page === "club" ? "Mi club" : page === "taller" ? "Taller demo" : page === "recompensas" ? "Recompensas" : "Administración"}`;
   }, [page]);
   const staff = account?.role === "admin" || account?.role === "company";
+  const demoClient = state.accounts.find(
+    (item) => item.role === "client" && (item.status ?? "active") === "active",
+  );
   const dashboardPage: Page = account?.role === "company" ? "empresa" : "admin";
   const dashboardProps = {
     state,
@@ -356,13 +371,13 @@ export default function App() {
         const before = stateRef.current;
         const next = fn(before);
         commit(next);
-        if (supabaseEnabled) {
+        if (supabaseEnabled && !presentationClientRef.current) {
           await syncBusinessMutation(before, next);
           await refreshBackend();
         }
         return null;
       } catch (e) {
-        if (supabaseEnabled) {
+        if (supabaseEnabled && !presentationClientRef.current) {
           try {
             await refreshBackend();
           } catch {
@@ -374,8 +389,12 @@ export default function App() {
     },
     onLogout: async () => {
       try {
-        if (supabaseEnabled && presentationCompanyRef.current) {
+        if (
+          supabaseEnabled &&
+          (presentationCompanyRef.current || presentationClientRef.current)
+        ) {
           presentationCompanyRef.current = null;
+          presentationClientRef.current = null;
           const adminId = presentationAdminRef.current;
           presentationAdminRef.current = null;
           commit({ ...stateRef.current, currentId: adminId });
@@ -414,12 +433,34 @@ export default function App() {
     navigate("empresa");
     setToast(`Vista de ${company.name} activada sin correo.`);
   };
+  const enterClientPresentation = (clientId: string) => {
+    const client = stateRef.current.accounts.find(
+      (item) =>
+        item.id === clientId &&
+        item.role === "client" &&
+        (item.status ?? "active") === "active",
+    );
+    const admin = stateRef.current.accounts.find(
+      (item) => item.id === stateRef.current.currentId && item.role === "admin",
+    ) ?? stateRef.current.accounts.find((item) => item.role === "admin");
+    if (!client || !admin) {
+      setToast("Importa un cliente activo e inicia sesión como administrador.");
+      return;
+    }
+    presentationAdminRef.current = admin.id;
+    presentationCompanyRef.current = null;
+    presentationClientRef.current = client.id;
+    commit({ ...stateRef.current, currentId: client.id });
+    navigate("club");
+    setToast(`Sandbox de ${client.name} activado. No usa correos ni fondos reales.`);
+  };
   const exitCompanyPresentation = () => {
-    if (!presentationCompanyRef.current) {
+    if (!presentationCompanyRef.current && !presentationClientRef.current) {
       navigate("admin");
       return;
     }
     presentationCompanyRef.current = null;
+    presentationClientRef.current = null;
     const adminId = presentationAdminRef.current;
     presentationAdminRef.current = null;
     commit({ ...stateRef.current, currentId: adminId });
@@ -471,7 +512,7 @@ export default function App() {
   async function confirmReward() {
     if (!reward || !account) return;
     try {
-      if (supabaseEnabled) {
+      if (supabaseEnabled && !presentationClientRef.current) {
         const redeemed = (await backendApi.redeem(reward.id)) as {
           code: string;
         };
@@ -558,7 +599,7 @@ export default function App() {
       return;
     }
     const selected = !account.favorites.includes(id);
-    if (supabaseEnabled) {
+    if (supabaseEnabled && !presentationClientRef.current) {
       void (async () => {
         try {
           await backendApi.favorite(account.id, id, selected);
@@ -664,11 +705,17 @@ export default function App() {
         </div>
       </header>
       {supabaseEnabled &&
-        (account?.role === "admin" || presentationCompanyRef.current) && (
+        (account?.role === "admin" ||
+          presentationCompanyRef.current ||
+          presentationClientRef.current) && (
           <div className="presentation-switcher" role="navigation" aria-label="Modo presentación">
             <span><ShieldCheck size={15} /> MODO PRESENTACIÓN</span>
             <button
-              className={!presentationCompanyRef.current ? "active" : ""}
+              className={
+                !presentationCompanyRef.current && !presentationClientRef.current
+                  ? "active"
+                  : ""
+              }
               onClick={exitCompanyPresentation}
             >
               Administrador
@@ -685,7 +732,24 @@ export default function App() {
                   {company.name}
                 </button>
               ))}
-            <small>Acceso visual sin correo · sesión segura del administrador</small>
+            {demoClient && (
+              <button
+                className={
+                  presentationClientRef.current &&
+                  !presentationCompanyRef.current
+                    ? "active"
+                    : ""
+                }
+                onClick={() => enterClientPresentation(demoClient.id)}
+              >
+                <UserRound size={14} /> Cliente demo · {demoClient.name.split(" ")[0]}
+              </button>
+            )}
+            <small>
+              {presentationClientRef.current
+                ? "Sandbox local · compras y canjes no afectan Supabase"
+                : "Acceso visual sin correo · sesión segura del administrador"}
+            </small>
           </div>
         )}
       <main id="main">
@@ -745,6 +809,10 @@ export default function App() {
             onLogout={() => {
               void (async () => {
                 try {
+                  if (supabaseEnabled && presentationClientRef.current) {
+                    exitCompanyPresentation();
+                    return;
+                  }
                   if (supabaseEnabled) await logoutBackend();
                   commit({ ...stateRef.current, currentId: null });
                   setToast("Cerraste sesión correctamente.");
@@ -761,7 +829,7 @@ export default function App() {
             onCopy={copy}
             onBrand={rewardNavigate}
             onLinkBrand={(b) => {
-              if (supabaseEnabled) {
+              if (supabaseEnabled && !presentationClientRef.current) {
                 const company = stateRef.current.companies.find(
                   (item) => item.name === b,
                 );
@@ -785,7 +853,7 @@ export default function App() {
                 setToast(`Tu perfil está vinculado a ${b}.`);
             }}
             onFund={() => {
-              if (supabaseEnabled) {
+              if (supabaseEnabled && !presentationClientRef.current) {
                 void (async () => {
                   try {
                     await backendApi.fund();
@@ -861,7 +929,7 @@ export default function App() {
               }
               couponCode={workshopCode}
               onCredit={async (a, b, k, r, c) => {
-                if (supabaseEnabled) {
+                if (supabaseEnabled && !presentationClientRef.current) {
                   try {
                     const company = stateRef.current.companies.find(
                       (item) => item.name === b,
@@ -889,7 +957,7 @@ export default function App() {
                 });
               }}
               onUse={async (couponId, b, c, w) => {
-                if (supabaseEnabled) {
+                if (supabaseEnabled && !presentationClientRef.current) {
                   try {
                     await backendApi.useCoupon(couponId, w, c);
                     await refreshBackend();
@@ -1024,7 +1092,7 @@ export default function App() {
             navigate("club");
           }}
           onConfirm={() => {
-            if (supabaseEnabled) {
+            if (supabaseEnabled && !presentationClientRef.current) {
               void (async () => {
                 try {
                   await backendApi.purchase(
