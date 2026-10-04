@@ -181,6 +181,7 @@ export function RewardDetail({
   onConfirm,
   onJoin,
   error,
+  submitting,
 }: {
   reward: Reward;
   account?: Account;
@@ -188,6 +189,7 @@ export function RewardDetail({
   onConfirm: () => void;
   onJoin: () => void;
   error: string;
+  submitting: boolean;
 }) {
   const balance = account?.points[reward.brand] ?? 0;
   return (
@@ -254,10 +256,12 @@ export function RewardDetail({
       )}
       <button
         className="button primary full"
-        disabled={!!account && balance < reward.points}
+        disabled={submitting || (!!account && balance < reward.points)}
         onClick={account ? onConfirm : onJoin}
       >
-        {account
+        {submitting
+          ? "Procesando canje…"
+          : account
           ? `Quemar ${fmt(reward.points)} tokens y mintear NFT`
           : "Únete al club para canjear"}
         <ArrowRight size={18} />

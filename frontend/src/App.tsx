@@ -112,6 +112,7 @@ export default function App() {
   const [bike, setBike] = useState<Bike>();
   const [reward, setReward] = useState<Reward>();
   const [rewardError, setRewardError] = useState("");
+  const [rewardSubmitting, setRewardSubmitting] = useState(false);
   const [coupon, setCoupon] = useState<Coupon>();
   const [workshopCode, setWorkshopCode] = useState("");
   const [toast, setToast] = useState("");
@@ -549,7 +550,8 @@ export default function App() {
     setReward(r);
   }
   async function confirmReward() {
-    if (!reward || !account) return;
+    if (!reward || !account || rewardSubmitting) return;
+    setRewardSubmitting(true);
     try {
       if (supabaseEnabled && !presentationClientRef.current) {
         const redeemed = (await backendApi.redeem(reward.id)) as {
@@ -567,7 +569,21 @@ export default function App() {
       setCoupon(result.coupon);
       setToast("Tu cupón está listo. El saldo de puntos se actualizó.");
     } catch (e) {
-      setRewardError((e as Error).message);
+      const message = (e as Error).message;
+      if (supabaseEnabled && !presentationClientRef.current) {
+        try {
+          await refreshBackend();
+        } catch {
+          /* The original redemption error is more useful to the customer. */
+        }
+      }
+      setRewardError(
+        message.includes("point_balances_balance_check")
+          ? "Tu saldo cambió durante el canje. Ya actualizamos los puntos disponibles; vuelve a revisarlos."
+          : message,
+      );
+    } finally {
+      setRewardSubmitting(false);
     }
   }
   function copy(text: string) {
@@ -1177,6 +1193,7 @@ export default function App() {
             staff ? navigate(dashboardPage) : openAuth("register")
           }
           error={rewardError}
+          submitting={rewardSubmitting}
         />
       )}
       {coupon && (

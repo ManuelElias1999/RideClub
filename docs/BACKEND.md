@@ -39,6 +39,7 @@ supabase/
     20261003190300_core_rpc.sql
     20261003190400_management_rpc.sql
     20261004030000_realtime.sql
+    20261004033000_balance_guard.sql
   functions/
     bootstrap-admin/
     manage-user/
