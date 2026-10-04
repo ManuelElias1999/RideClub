@@ -56,9 +56,11 @@ import {
   loadBackendState,
   logoutBackend,
   requestLogin,
+  requestPasswordReset,
   requestRegistration,
   subscribeBackendChanges,
   syncBusinessMutation,
+  updatePassword,
   type BackendRealtimeStatus,
 } from "./lib/supabase/api";
 type Page =
@@ -100,7 +102,7 @@ export default function App() {
   const [page, setPage] = useState<Page>(getPage);
   const [filter, setFilter] = useState<Brand | "Todas">("Todas");
   const [menu, setMenu] = useState(false);
-  const [authMode, setAuthMode] = useState<"login" | "register">("register");
+  const [authMode, setAuthMode] = useState<"login" | "register" | "recovery">("register");
   const [checkout, setCheckout] = useState<{
     bike: Bike;
     operationId: string;
@@ -227,8 +229,10 @@ export default function App() {
   useEffect(() => {
     if (!supabaseEnabled) return;
     let active = true;
+    const authIntent = new URLSearchParams(window.location.search).get("auth");
+    const passwordRecovery = authIntent === "recovery";
     const authCallback =
-      new URLSearchParams(window.location.search).get("auth") === "callback" ||
+      authIntent === "callback" ||
       new URLSearchParams(window.location.hash.slice(1)).has("access_token");
     const callbackError = new URLSearchParams(
       window.location.hash.slice(1),
@@ -279,7 +283,10 @@ export default function App() {
       // The SDK can finish restoring the callback session before the auth
       // listener subscribes. This fallback makes that successful session
       // deterministic instead of leaving the user on the login screen.
-      if (authCallback) enterAuthenticatedArea(next);
+      if (passwordRecovery) {
+        setAuthMode("recovery");
+        setAuth(true);
+      } else if (authCallback) enterAuthenticatedArea(next);
     })();
     window.addEventListener("focus", refresh);
     return () => {
@@ -1228,7 +1235,7 @@ export default function App() {
           created={created}
           error={authError}
           notice={authNotice}
-          onRegister={async (n, e, phone, c, b) => {
+          onRegister={async (n, e, phone, c, b, password) => {
             try {
               if (supabaseEnabled) {
                 await requestRegistration({
@@ -1237,9 +1244,10 @@ export default function App() {
                   phone: normalizePhone(phone),
                   brand: b,
                   referralCode: c,
+                  password,
                 });
                 setAuthNotice(
-                  "Revisa tu correo y abre el enlace para terminar el registro. El enlace iniciará tu sesión en este dispositivo.",
+                  "Revisa tu correo y confirma la cuenta una sola vez. Después podrás iniciar sesión con tu correo y contraseña.",
                 );
                 setAuthError("");
                 return;
@@ -1252,13 +1260,23 @@ export default function App() {
               setAuthError((e as Error).message);
             }
           }}
-          onLogin={async (e) => {
+          onLogin={async (e, password) => {
             try {
               if (supabaseEnabled) {
-                await requestLogin(e);
-                setAuthNotice(
-                  "Te enviamos un enlace de acceso. Ábrelo desde este navegador para entrar.",
+                await requestLogin(e, password);
+                const next = await refreshBackend();
+                const role = next.accounts.find(
+                  (item) => item.id === next.currentId,
+                )?.role;
+                setAuth(false);
+                navigate(
+                  role === "company"
+                    ? "empresa"
+                    : role === "admin"
+                      ? "admin"
+                      : "club",
                 );
+                setAuthNotice("");
                 setAuthError("");
                 return;
               }
@@ -1277,6 +1295,33 @@ export default function App() {
               );
             } catch (e) {
               setAuthError((e as Error).message);
+            }
+          }}
+          onRecover={async (e) => {
+            try {
+              await requestPasswordReset(e);
+              setAuthNotice(
+                "Te enviamos un enlace de un solo uso para crear tu contraseña.",
+              );
+              setAuthError("");
+            } catch (error) {
+              setAuthError((error as Error).message);
+            }
+          }}
+          onUpdatePassword={async (password) => {
+            try {
+              await updatePassword(password);
+              const next = await refreshBackend();
+              const role = next.accounts.find(
+                (item) => item.id === next.currentId,
+              )?.role;
+              setAuth(false);
+              setAuthNotice("");
+              setAuthError("");
+              window.history.replaceState({}, "", `${window.location.pathname}#${role === "company" ? "empresa" : role === "admin" ? "admin" : "club"}`);
+              navigate(role === "company" ? "empresa" : role === "admin" ? "admin" : "club");
+            } catch (error) {
+              setAuthError((error as Error).message);
             }
           }}
           onAdminDemo={() => {

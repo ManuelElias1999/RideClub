@@ -39,7 +39,7 @@ npm run dev -- --host 127.0.0.1
 - Portada independiente con explicación del producto, funcionamiento, empresas, ofertas destacadas y accesos a las cuatro secciones principales: Inicio, Marketplace, Recompensas y cuenta/dashboard.
 - Marketplace directo a la cuadrícula de motos, con selector por empresa y logo, lema y color de marca visibles en cada ficha; además incluye filtros por marca/estilo, búsqueda, orden y favoritas.
 - Fichas con características, fuente y precios publicados en USDT cuando existen. Compra simulada con saldo USDT ficticio para Zontes y NIU; Kiden requiere cotización. Las consultas comerciales llevan al sitio de origen; no se procesan pagos reales.
-- Registro por nombre, correo, **marca vinculada**, **celular con región y prefijo (+591 por defecto)** y **número de referido opcional**. Con Supabase configurado, el ingreso usa un enlace seguro enviado al correo; sin variables conserva el modo local de presentación.
+- Registro por nombre, correo, contraseña, **marca vinculada**, **celular con región y prefijo (+591 por defecto)** y **número de referido opcional**. Con Supabase configurado, el correo se confirma una sola vez y los siguientes ingresos usan correo y contraseña; sin variables conserva el modo local de presentación.
 - Cada cuenta recibe un **número único de ocho dígitos** y un enlace de invitación. El enlace precarga el código al registrarse.
 - Perfil con wallet **pendiente de creación** y configuración preparada para Base Sepolia. No se genera una wallet ficticia ni se guardan claves.
 - “Mi club”: saldo USDT de prueba, puntos separados por marca, compras con comprobante, beneficios disponibles/usados/vencidos, favoritas, referidos y actividad.
@@ -62,7 +62,7 @@ npm run dev -- --host 127.0.0.1
 
 ## Recorrido de demo
 
-1. En modo local, pulsa **Iniciar sesión** y usa la demo de Manuel. Con Supabase, solicita el enlace de acceso que llegará a tu correo.
+1. En modo local, pulsa **Iniciar sesión** y usa la demo de Manuel. Con Supabase, confirma el correo al crear la cuenta y luego ingresa con correo y contraseña.
 2. En **Mi club**, tienes **20.000 USDT de prueba**. Las cuentas existentes reciben este saldo una vez al actualizar, conservando sus puntos, referidos y beneficios. También puedes usar **Recargar 20.000 USDT demo**.
 3. En **Marketplace**, abre **Zontes 703F → Comprar con USDT de prueba → Confirmar compra de prueba**.
 4. El saldo queda en **8.510 USDT**, recibes **1.000 puntos Zontes** adicionales y se guarda un comprobante en **Mi club → Mis compras**. Recargar la página conserva los cambios.
