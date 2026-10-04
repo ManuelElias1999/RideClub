@@ -24,15 +24,33 @@ Las claves `SUPABASE_SERVICE_ROLE_KEY`, `BOOTSTRAP_SECRET` e `INTEGRATION_API_KE
 
 ## Respaldos y recuperación
 
-El despliegue usa los respaldos administrados que muestre el proyecto en **Supabase Dashboard → Database → Backups**. La frecuencia y retención dependen del plan contratado; no debe marcarse este punto como operativo hasta ver un respaldo disponible en ese panel.
+Los proyectos Supabase Free no incluyen respaldos administrados. RideClub incorpora `.github/workflows/database-backup.yml` como alternativa: crea cada día a las 08:00 UTC (04:00 de Bolivia) un dump lógico de esquema y datos, lo cifra con AES-256 y conserva únicamente el archivo cifrado como artefacto privado de GitHub durante 14 días.
+
+Configura en **GitHub → Settings → Secrets and variables → Actions → New repository secret**:
+
+- `SUPABASE_ACCESS_TOKEN`: token personal creado en Supabase Account → Access Tokens.
+- `SUPABASE_DB_PASSWORD`: contraseña de la base del proyecto.
+- `SUPABASE_PROJECT_REF`: identificador del proyecto Supabase.
+- `BACKUP_ENCRYPTION_PASSWORD`: contraseña larga y única para cifrar y recuperar copias.
+
+Después abre **GitHub → Actions → Encrypted database backup → Run workflow**. El requisito se considera operativo cuando el job termina en verde y aparece el artefacto descargable `rideclub-database-backup-*`. La contraseña de cifrado debe conservarse fuera de GitHub; sin ella no es posible recuperar el archivo.
 
 Una vez al mes, y antes de cambios importantes:
 
-1. Confirma la fecha del último respaldo exitoso.
-2. Exporta adicionalmente el esquema con `npx supabase db dump --linked --file backup-schema.sql` en un equipo seguro; no lo subas al repositorio si contiene datos.
+1. Confirma en GitHub Actions la fecha del último respaldo automático exitoso.
+2. Descarga un artefacto cifrado y conserva una segunda copia fuera de GitHub.
 3. Realiza la recuperación en un proyecto Supabase separado, nunca sobre producción durante una prueba.
 4. Verifica conteos de empresas, perfiles, compras, movimientos y cupones, además de una sesión de cada rol.
 5. Registra fecha, responsable, resultado y tiempo de recuperación.
+
+Para descifrar un artefacto descargado:
+
+```bash
+openssl enc -d -aes-256-cbc -pbkdf2 \
+  -in rideclub-FECHA.tar.gz.enc \
+  -out rideclub-FECHA.tar.gz
+tar -xzf rideclub-FECHA.tar.gz
+```
 
 Objetivos sugeridos para la presentación: pérdida máxima de 24 horas de datos (RPO) y recuperación en menos de 4 horas (RTO). Son objetivos operativos, no garantías, hasta completar un simulacro real.
 
