@@ -57,7 +57,9 @@ import {
   logoutBackend,
   requestLogin,
   requestRegistration,
+  subscribeBackendChanges,
   syncBusinessMutation,
+  type BackendRealtimeStatus,
 } from "./lib/supabase/api";
 type Page =
   | "inicio"
@@ -114,6 +116,9 @@ export default function App() {
   const [workshopCode, setWorkshopCode] = useState("");
   const [toast, setToast] = useState("");
   const [info, setInfo] = useState(false);
+  const [realtimeStatus, setRealtimeStatus] =
+    useState<BackendRealtimeStatus>(supabaseEnabled ? "connecting" : "disconnected");
+  const [backendAuthenticated, setBackendAuthenticated] = useState(false);
   const brands = state.companies
     .filter((c) => c.status === "active")
     .map((c) => c.name);
@@ -173,6 +178,7 @@ export default function App() {
   };
   const refreshBackend = async () => {
     const next = applyPresentationCompany(await loadBackendState());
+    setBackendAuthenticated(Boolean(next.currentId));
     commit(next);
     return next;
   };
@@ -248,6 +254,7 @@ export default function App() {
         return next;
       } catch (error) {
         if (active) {
+          setBackendAuthenticated(false);
           commit({ ...stateRef.current, currentId: null });
           setToast((error as Error).message);
         }
@@ -276,6 +283,33 @@ export default function App() {
       data.subscription.unsubscribe();
     };
   }, []);
+  useEffect(() => {
+    if (!supabaseEnabled) return;
+    let refreshTimer: number | undefined;
+    let stopped = false;
+    const unsubscribe = subscribeBackendChanges(
+      () => {
+        // A purchase or redemption changes several tables in one transaction.
+        // Group those notifications into one consistent backend snapshot.
+        window.clearTimeout(refreshTimer);
+        refreshTimer = window.setTimeout(() => {
+          if (stopped || presentationClientRef.current) return;
+          void refreshBackend().catch((error) => {
+            if (!stopped) setToast((error as Error).message);
+          });
+        }, 220);
+      },
+      (status) => {
+        if (!stopped) setRealtimeStatus(status);
+      },
+      backendAuthenticated,
+    );
+    return () => {
+      stopped = true;
+      window.clearTimeout(refreshTimer);
+      unsubscribe();
+    };
+  }, [backendAuthenticated]);
   useEffect(() => {
     const current = state.accounts.find((item) => item.id === state.currentId);
     if (
@@ -323,6 +357,7 @@ export default function App() {
   const dashboardPage: Page = account?.role === "company" ? "empresa" : "admin";
   const dashboardProps = {
     state,
+    realtimeStatus,
     onImportClients: async (
       rows: ClientImportRow[],
     ): Promise<ClientImportOutcome[]> => {
@@ -467,6 +502,9 @@ export default function App() {
     commit({ ...stateRef.current, currentId: adminId });
     navigate("admin");
     setToast("Vista de administrador restaurada.");
+    if (supabaseEnabled) {
+      void refreshBackend().catch((error) => setToast((error as Error).message));
+    }
   };
   const workshopState =
     account?.role === "company"

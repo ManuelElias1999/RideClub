@@ -17,7 +17,7 @@ No incluye contratos, tokens, NFTs, pagos reales ni creación de wallets. Los ca
 | Empresas | Alta, edición, publicación, suspensión, identidad visual, correo de acceso y membresía |
 | Catálogo | CRUD y archivado recuperable de motos y recompensas |
 | Clientes | Alta y edición por admin; cada empresa solo opera clientes de su ámbito |
-| Métricas | Perfiles, compras, puntos, canjes, cupones, actividad y auditoría, filtrados por RLS |
+| Métricas en vivo | Perfiles, compras, puntos, canjes, cupones, actividad y auditoría con Supabase Realtime, filtrados por RLS |
 | Puntos | Reglas por empresa, libro contable, saldo derivado y vencimiento trazable |
 | Compra demo | Descuento de USDT, comprobante, puntos y referido en una transacción idempotente |
 | Canje | Validación de saldo/cupo, descuento y cupón en una transacción |
@@ -38,6 +38,7 @@ supabase/
     20261003190200_auth.sql
     20261003190300_core_rpc.sql
     20261003190400_management_rpc.sql
+    20261004030000_realtime.sql
   functions/
     bootstrap-admin/
     manage-user/

@@ -4289,7 +4289,12 @@ main {
 .business-filters { display: flex; align-items: end; gap: 12px; padding: 14px; margin-bottom: 22px; border: 1px solid #dfe5d8; border-radius: 8px; background: #fff; }
 .business-filters label { display: grid; gap: 5px; color: #687462; font-size: 9px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
 .business-filters select, .business-filters input { min-height: 36px; padding: 7px 10px; border: 1px solid #d9dfd3; border-radius: 5px; background: #fbfcf8; }
-.dashboard-demo-label { margin-left: auto; padding-bottom: 9px; color: #7a8675; font-size: 9px; }
+.dashboard-demo-label { display: inline-flex; align-items: center; gap: 5px; margin-left: auto; padding-bottom: 9px; color: #7a8675; font-size: 9px; }
+.live-dot { width: 7px; height: 7px; border-radius: 50%; background: #9ca49a; }
+.live-dot.connected { background: #65a30d; box-shadow: 0 0 0 3px #65a30d1f; }
+.live-dot.connecting { background: #d69e2e; animation: live-pulse 1.25s ease-in-out infinite; }
+.live-dot.error { background: #d97706; animation: live-pulse 1.25s ease-in-out infinite; }
+@keyframes live-pulse { 50% { opacity: .35; } }
 .company-scope { display: flex; align-items: center; gap: 12px; min-width: 150px; min-height: 36px; }
 .company-scope .brand-logo { width: 65px; height: 24px; }
 .business-notice, .business-message { display: flex; align-items: center; gap: 10px; padding: 13px 16px; margin-bottom: 18px; border-radius: 7px; background: #fff4d7; color: #6b581d; font-size: 12px; }

@@ -39,6 +39,7 @@ import type {
   Demo,
   PointRuleSet,
 } from "../lib/demo";
+import type { BackendRealtimeStatus } from "../lib/supabase/api";
 import type { Bike, Reward } from "../data/catalog";
 import {
   archiveItem,
@@ -105,12 +106,14 @@ const pointRuleLabels: Record<keyof PointRuleSet, string> = {
 };
 export default function Dashboard({
   state,
+  realtimeStatus,
   onMutation,
   onImportClients,
   onLogout,
   onWorkshop,
 }: {
   state: Demo;
+  realtimeStatus: BackendRealtimeStatus;
   onMutation: Mutation;
   onImportClients: (rows: ClientImportRow[]) => Promise<ClientImportOutcome[]>;
   onLogout: () => void;
@@ -481,7 +484,18 @@ export default function Dashboard({
               </button>
             )}
             <span className="dashboard-demo-label">
-              Datos del ámbito autorizado · USDT ficticio
+              <i
+                className={`live-dot ${realtimeStatus}`}
+                aria-hidden="true"
+              />
+              {realtimeStatus === "connected"
+                ? "Datos en vivo"
+                : realtimeStatus === "connecting"
+                  ? "Conectando datos"
+                  : realtimeStatus === "error"
+                    ? "Reconectando datos"
+                    : "Datos del ámbito autorizado"}
+              {" · USDT ficticio"}
             </span>
           </div>
           {!global && own?.status !== "active" && (

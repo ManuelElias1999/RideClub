@@ -13,6 +13,62 @@ import type { BikeDraft, ClientDraft, CompanyDraft, RewardDraft } from "../busin
 import type { ClientImportOutcome, ClientImportRow } from "../clientCsv";
 import { supabaseClient } from "./client";
 
+const publicRealtimeTables = [
+  "companies",
+  "point_rules",
+  "bikes",
+  "rewards",
+] as const;
+
+const privateRealtimeTables = [
+  "profiles",
+  "company_memberships",
+  "point_balances",
+  "purchases",
+  "point_ledger",
+  "coupons",
+  "favorites",
+  "audit_logs",
+] as const;
+
+export type BackendRealtimeStatus =
+  | "connecting"
+  | "connected"
+  | "disconnected"
+  | "error";
+
+export function subscribeBackendChanges(
+  onChange: () => void,
+  onStatus: (status: BackendRealtimeStatus) => void,
+  authenticated: boolean,
+) {
+  const client = supabaseClient();
+  const channel = client.channel(`rideclub-live-${crypto.randomUUID()}`);
+
+  const tables = authenticated
+    ? [...publicRealtimeTables, ...privateRealtimeTables]
+    : publicRealtimeTables;
+  for (const table of tables) {
+    channel.on(
+      "postgres_changes",
+      { event: "*", schema: "public", table },
+      onChange,
+    );
+  }
+
+  onStatus("connecting");
+  channel.subscribe((status) => {
+    if (status === "SUBSCRIBED") onStatus("connected");
+    else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT")
+      onStatus("error");
+    else if (status === "CLOSED") onStatus("disconnected");
+  });
+
+  return () => {
+    void client.removeChannel(channel);
+  };
+}
+
 const toDbKind: Record<ActivityKind, string> = {
   Compra: "purchase",
   Mantenimiento: "maintenance",
