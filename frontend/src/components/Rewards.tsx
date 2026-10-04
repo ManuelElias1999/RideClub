@@ -11,6 +11,7 @@ export default function Rewards({
   coupons,
   onSelect,
   onJoin,
+  staffMode = false,
 }: {
   filter: Brand | "Todas";
   setFilter: (b: Brand | "Todas") => void;
@@ -18,6 +19,7 @@ export default function Rewards({
   coupons: Coupon[];
   onSelect: (r: Reward) => void;
   onJoin: () => void;
+  staffMode?: boolean;
 }) {
   const { brands, rewards, brandInfo } = useCatalog();
   const selectedCompany = filter === "Todas" ? undefined : brandInfo[filter];
@@ -51,8 +53,16 @@ export default function Rewards({
         <div>
           <Coins size={23} />
           <span>
-            {account ? "Tokens disponibles en tu wallet" : "Beneficios por marca"}
-            <small>Cada saldo pertenece a un token distinto.</small>
+            {account
+              ? "Tokens disponibles en tu wallet"
+              : staffMode
+                ? "Sesión de administración activa"
+                : "Beneficios por marca"}
+            <small>
+              {staffMode
+                ? "Puedes revisar el catálogo y volver a tu dashboard cuando quieras."
+                : "Cada saldo pertenece a un token distinto."}
+            </small>
           </span>
         </div>
         {account ? (
@@ -66,7 +76,7 @@ export default function Rewards({
           </div>
         ) : (
           <button className="button dark" onClick={onJoin}>
-            Crear cuenta <ArrowUpRight size={17} />
+            {staffMode ? "Volver al dashboard" : "Crear cuenta"} <ArrowUpRight size={17} />
           </button>
         )}
       </div>

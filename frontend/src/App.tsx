@@ -86,6 +86,8 @@ export default function App() {
     };
   });
   const stateRef = useRef(state);
+  const presentationCompanyRef = useRef<string | null>(null);
+  const presentationAdminRef = useRef<string | null>(null);
   const storageSync = useRef(false);
   stateRef.current = state;
   const [page, setPage] = useState<Page>(getPage);
@@ -118,8 +120,45 @@ export default function App() {
     stateRef.current = next;
     setState(next);
   };
+  const applyPresentationCompany = (next: Demo): Demo => {
+    const companyId = presentationCompanyRef.current;
+    if (!companyId) return next;
+    const company = next.companies.find((item) => item.id === companyId);
+    if (!company) {
+      presentationCompanyRef.current = null;
+      return next;
+    }
+    const existing = next.accounts.find(
+      (item) => item.role === "company" && item.companyId === company.id,
+    );
+    if (existing) return { ...next, currentId: existing.id };
+    const preview: Account = {
+      id: `presentation-${company.id}`,
+      name: company.name,
+      email: company.email,
+      role: "company",
+      companyId: company.id,
+      brand: company.name,
+      createdAt: company.createdAt,
+      balanceUSDT: 0,
+      code: "",
+      wallet: {
+        status: "ready",
+        chainId: 84532,
+        address: company.wallet.address,
+      },
+      points: Object.fromEntries(next.companies.map((item) => [item.name, 0])),
+      favorites: [],
+      status: "active",
+    };
+    return {
+      ...next,
+      accounts: [...next.accounts, preview],
+      currentId: preview.id,
+    };
+  };
   const refreshBackend = async () => {
-    const next = await loadBackendState();
+    const next = applyPresentationCompany(await loadBackendState());
     commit(next);
     return next;
   };
@@ -189,7 +228,7 @@ export default function App() {
     };
     const refresh = async () => {
       try {
-        const next = await loadBackendState();
+        const next = applyPresentationCompany(await loadBackendState());
         if (active) commit(next);
         return next;
       } catch (error) {
@@ -289,6 +328,15 @@ export default function App() {
     },
     onLogout: async () => {
       try {
+        if (supabaseEnabled && presentationCompanyRef.current) {
+          presentationCompanyRef.current = null;
+          const adminId = presentationAdminRef.current;
+          presentationAdminRef.current = null;
+          commit({ ...stateRef.current, currentId: adminId });
+          navigate("admin");
+          setToast("Volviste a la administración global.");
+          return;
+        }
         if (supabaseEnabled) await logoutBackend();
         commit({ ...stateRef.current, currentId: null });
         navigate("inicio");
@@ -297,6 +345,40 @@ export default function App() {
       }
     },
     onWorkshop: () => navigate("taller"),
+  };
+  const enterCompanyPresentation = (companyId: string) => {
+    const company = stateRef.current.companies.find(
+      (item) => item.id === companyId && item.status === "active",
+    );
+    if (!company) {
+      setToast("Esta empresa no está activa para la presentación.");
+      return;
+    }
+    const admin = stateRef.current.accounts.find(
+      (item) => item.id === stateRef.current.currentId && item.role === "admin",
+    ) ?? stateRef.current.accounts.find((item) => item.role === "admin");
+    if (!admin) {
+      setToast("Inicia sesión como administrador para usar el modo presentación.");
+      return;
+    }
+    presentationAdminRef.current = admin.id;
+    presentationCompanyRef.current = company.id;
+    const next = applyPresentationCompany(stateRef.current);
+    commit(next);
+    navigate("empresa");
+    setToast(`Vista de ${company.name} activada sin correo.`);
+  };
+  const exitCompanyPresentation = () => {
+    if (!presentationCompanyRef.current) {
+      navigate("admin");
+      return;
+    }
+    presentationCompanyRef.current = null;
+    const adminId = presentationAdminRef.current;
+    presentationAdminRef.current = null;
+    commit({ ...stateRef.current, currentId: adminId });
+    navigate("admin");
+    setToast("Vista de administrador restaurada.");
   };
   const workshopState =
     account?.role === "company"
@@ -535,6 +617,31 @@ export default function App() {
           </button>
         </div>
       </header>
+      {supabaseEnabled &&
+        (account?.role === "admin" || presentationCompanyRef.current) && (
+          <div className="presentation-switcher" role="navigation" aria-label="Modo presentación">
+            <span><ShieldCheck size={15} /> MODO PRESENTACIÓN</span>
+            <button
+              className={!presentationCompanyRef.current ? "active" : ""}
+              onClick={exitCompanyPresentation}
+            >
+              Administrador
+            </button>
+            {state.companies
+              .filter((company) => company.status === "active")
+              .map((company) => (
+                <button
+                  key={company.id}
+                  className={presentationCompanyRef.current === company.id ? "active" : ""}
+                  onClick={() => enterCompanyPresentation(company.id)}
+                >
+                  <BrandLogo brand={company.name} />
+                  {company.name}
+                </button>
+              ))}
+            <small>Acceso visual sin correo · sesión segura del administrador</small>
+          </div>
+        )}
       <main id="main">
         {page === "inicio" && (
           <Landing
@@ -573,9 +680,12 @@ export default function App() {
             filter={filter}
             setFilter={setFilter}
             account={account?.role === "client" ? account : undefined}
+            staffMode={staff}
             coupons={state.coupons}
             onSelect={openReward}
-            onJoin={openAuth}
+            onJoin={() =>
+              staff ? navigate(dashboardPage) : openAuth("register")
+            }
           />
         )}
         {page === "club" && staff && (
@@ -907,10 +1017,12 @@ export default function App() {
       {reward && (
         <RewardDetail
           reward={reward}
-          account={account}
+          account={account?.role === "client" ? account : undefined}
           onClose={() => setReward(undefined)}
           onConfirm={confirmReward}
-          onJoin={openAuth}
+          onJoin={() =>
+            staff ? navigate(dashboardPage) : openAuth("register")
+          }
           error={rewardError}
         />
       )}

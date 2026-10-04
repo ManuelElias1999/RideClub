@@ -4494,6 +4494,21 @@ main {
 }
 
 /* Wallet y marketplace blockchain mockup */
+.presentation-switcher {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px clamp(24px, 2.5vw, 48px);
+  border-bottom: 1px solid #dfe6d8;
+  color: #dcebd1;
+  background: #172019;
+}
+.presentation-switcher > span { display: flex; align-items: center; gap: 7px; margin-right: 4px; color: #bde37f; font-size: 8px; font-weight: 800; letter-spacing: .1em; }
+.presentation-switcher button { display: flex; align-items: center; gap: 7px; padding: 7px 10px; border: 1px solid #ffffff20; border-radius: 5px; color: #c7d0c2; background: #ffffff08; font-size: 9px; }
+.presentation-switcher button:hover, .presentation-switcher button.active { border-color: #bce86d; color: #172019; background: #c6f46a; }
+.presentation-switcher .brand-logo { width: 39px; height: 14px; filter: brightness(0) invert(1); }
+.presentation-switcher button.active .brand-logo, .presentation-switcher button:hover .brand-logo { filter: brightness(0); }
+.presentation-switcher > small { margin-left: auto; color: #899685; font-size: 8px; }
 .wallet-address {
   display: grid;
   grid-template-columns: 1fr auto;
@@ -4592,6 +4607,9 @@ main {
   .showroom-token { display: none; }
 }
 @media (max-width: 680px) {
+  .presentation-switcher { overflow-x: auto; padding-inline: 18px; }
+  .presentation-switcher > span, .presentation-switcher > small { display: none; }
+  .presentation-switcher button { flex: 0 0 auto; }
   .wallet-address { order: 3; width: 100%; }
   .brand-balances { grid-template-columns: 1fr; }
   .brand-balances > button { min-height: 82px; }
